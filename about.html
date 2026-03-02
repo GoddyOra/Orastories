@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Orastories | Home</title>
+  <title>Orastories | About</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -33,19 +33,8 @@
       background: #0f0f0f;
     }
   </style>
-<script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@^19.2.4",
-    "react/": "https://esm.sh/react@^19.2.4/",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
-    "@google/genai": "https://esm.sh/@google/genai@^1.41.0"
-  }
-}
-</script>
-<link rel="stylesheet" href="/index.css">
 </head>
-<body id="homeBody" class="bg-[#fcfaf7] text-[#1a1a1a] font-['Montserrat'] transition-colors duration-500">
+<body id="aboutBody" class="bg-[#fcfaf7] text-[#1a1a1a] font-['Montserrat'] transition-colors duration-500">
   <nav class="fixed top-0 left-0 right-0 bg-white/95 dark-mode:bg-black/95 backdrop-blur z-50 border-b border-gray-200 dark-mode:border-white/10 transition-colors duration-500">
     <div class="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
       <a href="index.html" class="text-2xl font-['Playfair Display'] font-bold dark-mode:text-white transition-colors">
@@ -70,52 +59,69 @@
     </div>
   </nav>
 
-  <div id="contentWrapper" class="pt-20">
-    <div id="root"></div>
-  </div>
+  <main class="pt-20 max-w-4xl mx-auto px-6 py-16">
+    <h1 class="text-5xl font-['Playfair Display'] font-bold mb-8 dark-mode:text-white">About Orastories</h1>
+    
+    <div class="space-y-6 dark-mode:text-gray-300">
+      <p class="text-lg leading-relaxed">
+        Orastories is an immersive reading platform designed to bring stories to life through cutting-edge technology and elegant design. Our mission is to create a sanctuary for readers and writers alike.
+      </p>
+      
+      <p class="text-lg leading-relaxed">
+        We believe that reading should be more than just consuming words on a screen. It should be an experience—a journey into worlds crafted by talented storytellers, enhanced by thoughtful design and intelligent features.
+      </p>
+      
+      <h2 class="text-3xl font-['Playfair Display'] font-bold mt-12 mb-4 dark-mode:text-white">Our Vision</h2>
+      <p class="text-lg leading-relaxed">
+        To democratize access to exceptional literature and create a community where readers can discover, engage with, and celebrate the stories that matter most to them.
+      </p>
+      
+      <h2 class="text-3xl font-['Playfair Display'] font-bold mt-12 mb-4 dark-mode:text-white">Our Features</h2>
+      <ul class="text-lg leading-relaxed space-y-3">
+        <li>• <strong>Immersive Reader:</strong> A distraction-free reading environment designed for focus and engagement</li>
+        <li>• <strong>Smart Library:</strong> Organize and discover your favorite stories with intelligent categorization</li>
+        <li>• <strong>AI Assistant:</strong> Personalized recommendations powered by AI technology</li>
+        <li>• <strong>Dark/Light Modes:</strong> Reading experience optimized for your preferred lighting environment</li>
+        <li>• <strong>Minimalist Design:</strong> Beautiful, clean interface that gets out of the way of the story</li>
+      </ul>
+    </div>
+  </main>
+
+  <footer class="border-t border-gray-200 dark-mode:border-white/10 mt-16 py-8 text-center text-gray-600 dark-mode:text-gray-400 transition-colors duration-500">
+    <p>&copy; 2026 Orastories. All rights reserved.</p>
+  </footer>
 
   <script>
     const themeToggle = document.getElementById('themeToggle');
-    const homeBody = document.getElementById('homeBody');
+    const aboutBody = document.getElementById('aboutBody');
     const sunIcon = document.getElementById('sunIcon');
     const moonIcon = document.getElementById('moonIcon');
 
     const isDarkMode = localStorage.getItem('darkMode') === 'true';
     if (isDarkMode) {
-      homeBody.classList.add('dark-mode');
-      homeBody.style.backgroundColor = '#0f0f0f';
-      homeBody.style.color = '#e0e0e0';
+      aboutBody.classList.add('dark-mode');
+      aboutBody.style.backgroundColor = '#0f0f0f';
+      aboutBody.style.color = '#e0e0e0';
       sunIcon.style.display = 'block';
       moonIcon.style.display = 'none';
     }
 
     themeToggle.addEventListener('click', () => {
-      const isDark = homeBody.classList.toggle('dark-mode');
+      const isDark = aboutBody.classList.toggle('dark-mode');
       localStorage.setItem('darkMode', isDark);
       
       if (isDark) {
-        homeBody.style.backgroundColor = '#0f0f0f';
-        homeBody.style.color = '#e0e0e0';
+        aboutBody.style.backgroundColor = '#0f0f0f';
+        aboutBody.style.color = '#e0e0e0';
         sunIcon.style.display = 'block';
         moonIcon.style.display = 'none';
       } else {
-        homeBody.style.backgroundColor = '#fcfaf7';
-        homeBody.style.color = '#1a1a1a';
+        aboutBody.style.backgroundColor = '#fcfaf7';
+        aboutBody.style.color = '#1a1a1a';
         sunIcon.style.display = 'none';
         moonIcon.style.display = 'block';
       }
     });
   </script>
-<script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@^19.2.4",
-    "react/": "https://esm.sh/react@^19.2.4/",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
-    "@google/genai": "https://esm.sh/@google/genai@^1.41.0"
-  }
-}
-</script>
-<script type="module" src="/index.tsx"></script>
 </body>
 </html>
