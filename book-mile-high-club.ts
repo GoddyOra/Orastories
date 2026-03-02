@@ -2518,8 +2518,7 @@ They fall asleep like that, holding hands over the tiny flutter of new life betw
 
 Outside, the summer stars shimmer, bearing witness to the close of one chapter and the beginning of another. Their story—full of heartbreak and healing, action and romance—has forged an unbreakable bond. And as they rest, ready for whatever the future holds, one thing is certain: their love will always find its way, soaring high and true, like a Thunderbird in an endless sky.
 
-The End`
+    The End`
       }
     ]
-  }
-];
+  };

@@ -1,30 +1,19 @@
 
-import { GoogleGenAI } from "@google/genai";
+// NOTE: @google/genai is a server-side SDK and should not be imported in
+// browser bundles. Importing it at module top-level prevents Vite from
+// serving the app in development. Keep the frontend service as a tiny
+// shim that returns a helpful message and let developers implement a
+// server-side proxy (or API route) that uses the GenAI SDK.
 
 export class GeminiService {
-  private ai: GoogleGenAI;
+  constructor() {}
 
-  constructor() {
-    this.ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  }
-
-  async discussChapter(chapterContent: string, userQuery: string) {
-    try {
-      const response = await this.ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: `
-          CONTEXT: You are the AI Assistant for an author's website. You have access to the current chapter text.
-          CHAPTER TEXT: "${chapterContent.substring(0, 4000)}"
-          
-          USER QUESTION: "${userQuery}"
-          
-          INSTRUCTION: Answer as a sophisticated literary companion. Use a Dark Academia tone (erudite, slightly mysterious, respectful). Focus on themes, symbols, and literary analysis.
-        `
-      });
-      return response.text;
-    } catch (error) {
-      console.error("Gemini Error:", error);
-      return "The ink seems to have dried for a moment. Please try asking your question again later.";
-    }
+  async discussChapter(_chapterContent: string, _userQuery: string) {
+    // Runtime environments in the browser cannot call the official
+    // Google GenAI SDK directly. Return a friendly fallback so the
+    // UI remains usable. Implement a server-side endpoint to proxy
+    // requests to Google GenAI and call that from the frontend.
+    console.warn('GeminiService: running in browser; AI calls disabled.');
+    return "AI features are disabled in the browser. Configure a server-side proxy using @google/genai and update the frontend to call it.";
   }
 }

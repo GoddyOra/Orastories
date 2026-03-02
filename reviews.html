@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Orastories | Reviews</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Montserrat:wght@300;400;600&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
+  <style>
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #fcfaf7;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #d1d1d1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #b1b1b1;
+    }
+    
+    body {
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    
+    .dark-mode ::-webkit-scrollbar-track {
+      background: #0f0f0f;
+    }
+  </style>
+</head>
+<body id="reviewsBody" class="bg-[#fcfaf7] text-[#1a1a1a] font-['Montserrat'] transition-colors duration-500">
+  <nav class="fixed top-0 left-0 right-0 bg-white/95 dark-mode:bg-black/95 backdrop-blur z-50 border-b border-gray-200 dark-mode:border-white/10 transition-colors duration-500">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
+      <a href="index.html" class="text-2xl font-['Playfair Display'] font-bold dark-mode:text-white transition-colors">
+        Orastories
+      </a>
+      <div class="flex gap-8 items-center">
+        <a href="index.html" class="hover:text-amber-700 dark-mode:hover:text-amber-400 transition-colors">Home</a>
+        <a href="about.html" class="hover:text-amber-700 dark-mode:hover:text-amber-400 transition-colors">About</a>
+        <a href="books.html" class="hover:text-amber-700 dark-mode:hover:text-amber-400 transition-colors">Books</a>
+        <a href="reviews.html" class="hover:text-amber-700 dark-mode:hover:text-amber-400 transition-colors">Reviews</a>
+        <a href="blog.html" class="hover:text-amber-700 dark-mode:hover:text-amber-400 transition-colors">Blog</a>
+        <a href="contact.html" class="hover:text-amber-700 dark-mode:hover:text-amber-400 transition-colors">Contact</a>
+        <button id="themeToggle" class="p-2 rounded-full hover:bg-gray-200 dark-mode:hover:bg-gray-800 transition-colors">
+          <svg id="sunIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style="display: none;">
+            <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+          </svg>
+          <svg id="moonIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="pt-20 max-w-4xl mx-auto px-6 py-16">
+    <h1 class="text-5xl font-['Playfair Display'] font-bold mb-12 dark-mode:text-white">Reader Reviews</h1>
+    
+    <div class="space-y-8">
+      <!-- Review Card -->
+      <div class="border-l-4 border-amber-700 dark-mode:border-amber-400 bg-white dark-mode:bg-gray-900 p-6 rounded transition-all duration-300">
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <h3 class="text-xl font-bold dark-mode:text-white">Unforgettable Journey</h3>
+            <p class="text-sm text-gray-600 dark-mode:text-gray-400">Sarah M.</p>
+          </div>
+          <div class="text-amber-700 dark-mode:text-amber-400">★★★★★</div>
+        </div>
+        <p class="text-gray-700 dark-mode:text-gray-300 leading-relaxed">
+          This book completely captured my imagination from the first page. The characters are so well-developed and the plot keeps you guessing until the very end. I couldn't put it down!
+        </p>
+      </div>
+
+      <div class="border-l-4 border-amber-700 dark-mode:border-amber-400 bg-white dark-mode:bg-gray-900 p-6 rounded transition-all duration-300">
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <h3 class="text-xl font-bold dark-mode:text-white">A True Masterpiece</h3>
+            <p class="text-sm text-gray-600 dark-mode:text-gray-400">James T.</p>
+          </div>
+          <div class="text-amber-700 dark-mode:text-amber-400">★★★★★</div>
+        </div>
+        <p class="text-gray-700 dark-mode:text-gray-300 leading-relaxed">
+          The writing is exquisite. Every paragraph is crafted with such care and attention to detail. This author has a gift for weaving profound themes into an engaging narrative.
+        </p>
+      </div>
+
+      <div class="border-l-4 border-amber-700 dark-mode:border-amber-400 bg-white dark-mode:bg-gray-900 p-6 rounded transition-all duration-300">
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <h3 class="text-xl font-bold dark-mode:text-white">Emotionally Resonant</h3>
+            <p class="text-sm text-gray-600 dark-mode:text-gray-400">Emma R.</p>
+          </div>
+          <div class="text-amber-700 dark-mode:text-amber-400">★★★★★</div>
+        </div>
+        <p class="text-gray-700 dark-mode:text-gray-300 leading-relaxed">
+          I found myself deeply connected to the protagonist's journey. The exploration of human emotions felt so authentic and real. This is the kind of book that stays with you long after you've finished it.
+        </p>
+      </div>
+
+      <div class="border-l-4 border-amber-700 dark-mode:border-amber-400 bg-white dark-mode:bg-gray-900 p-6 rounded transition-all duration-300">
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <h3 class="text-xl font-bold dark-mode:text-white">Highly Recommended</h3>
+            <p class="text-sm text-gray-600 dark-mode:text-gray-400">Michael K.</p>
+          </div>
+          <div class="text-amber-700 dark-mode:text-amber-400">★★★★☆</div>
+        </div>
+        <p class="text-gray-700 dark-mode:text-gray-300 leading-relaxed">
+          A captivating read that explores complex themes with nuance and grace. If you enjoy thoughtful, character-driven stories, this is definitely worth your time.
+        </p>
+      </div>
+    </div>
+  </main>
+
+  <footer class="border-t border-gray-200 dark-mode:border-white/10 mt-16 py-8 text-center text-gray-600 dark-mode:text-gray-400 transition-colors duration-500">
+    <p>&copy; 2026 Orastories. All rights reserved.</p>
+  </footer>
+
+  <script>
+    const themeToggle = document.getElementById('themeToggle');
+    const reviewsBody = document.getElementById('reviewsBody');
+    const sunIcon = document.getElementById('sunIcon');
+    const moonIcon = document.getElementById('moonIcon');
+
+    const isDarkMode = localStorage.getItem('darkMode') === 'true';
+    if (isDarkMode) {
+      reviewsBody.classList.add('dark-mode');
+      reviewsBody.style.backgroundColor = '#0f0f0f';
+      reviewsBody.style.color = '#e0e0e0';
+      sunIcon.style.display = 'block';
+      moonIcon.style.display = 'none';
+    }
+
+    themeToggle.addEventListener('click', () => {
+      const isDark = reviewsBody.classList.toggle('dark-mode');
+      localStorage.setItem('darkMode', isDark);
+      
+      if (isDark) {
+        reviewsBody.style.backgroundColor = '#0f0f0f';
+        reviewsBody.style.color = '#e0e0e0';
+        sunIcon.style.display = 'block';
+        moonIcon.style.display = 'none';
+      } else {
+        reviewsBody.style.backgroundColor = '#fcfaf7';
+        reviewsBody.style.color = '#1a1a1a';
+        sunIcon.style.display = 'none';
+        moonIcon.style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>
