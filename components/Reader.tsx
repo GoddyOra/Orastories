@@ -9,23 +9,61 @@ interface ReaderProps {
   onThemeChange: (theme: ThemeMode) => void;
 }
 
+const getDeviceWidth = () => (typeof window === 'undefined' ? 1280 : window.innerWidth);
+
+const getDefaultTypography = (width: number) => {
+  if (width < 640) return { fontSize: 16, lineHeight: 1.75 };
+  if (width < 1024) return { fontSize: 18, lineHeight: 1.8 };
+  return { fontSize: 20, lineHeight: 1.85 };
+};
+
+const getFontRange = (width: number) => {
+  if (width < 640) return { min: 14, max: 22 };
+  if (width < 1024) return { min: 15, max: 28 };
+  return { min: 16, max: 32 };
+};
+
+const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+
 const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeChange }) => {
+  const [viewportWidth, setViewportWidth] = useState(getDeviceWidth);
   const [currentChapterIndex, setCurrentChapterIndex] = useState(0);
   const [readingProgress, setReadingProgress] = useState(0);
-  const [settings, setSettings] = useState<ReadingSettings>({
-    theme: externalTheme,
-    fontSize: 20,
-    lineHeight: 1.8
+  const [settings, setSettings] = useState<ReadingSettings>(() => {
+    const defaults = getDefaultTypography(getDeviceWidth());
+    return {
+      theme: externalTheme,
+      fontSize: defaults.fontSize,
+      lineHeight: defaults.lineHeight
+    };
   });
   const [showSettings, setShowSettings] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const chapter = book.chapters[currentChapterIndex];
+  const fontRange = getFontRange(viewportWidth);
 
   // Sync settings theme with external theme
   useEffect(() => {
     setSettings(s => ({ ...s, theme: externalTheme }));
   }, [externalTheme]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setViewportWidth(window.innerWidth);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    const updatedRange = getFontRange(viewportWidth);
+    setSettings(prev => ({
+      ...prev,
+      fontSize: clamp(prev.fontSize, updatedRange.min, updatedRange.max)
+    }));
+  }, [viewportWidth]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -93,12 +131,12 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
   };
 
   const handleAuraChange = (t: ThemeMode) => {
-    setSettings({ ...settings, theme: t });
+    setSettings(prev => ({ ...prev, theme: t }));
     onThemeChange(t);
   };
 
   return (
-    <div className={`min-h-screen transition-colors duration-700 ease-in-out pb-32 ${getThemeClasses()}`} ref={containerRef}>
+    <div className={`min-h-screen transition-colors duration-700 ease-in-out pb-20 md:pb-32 ${getThemeClasses()}`} ref={containerRef}>
       {/* Progress Bar */}
       <div className="fixed top-0 left-0 w-full h-1 z-50 bg-gray-800/30">
         <div 
@@ -108,12 +146,12 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
       </div>
 
       {/* Reader Nav */}
-      <nav className={`fixed top-1 left-0 w-full px-6 py-4 flex justify-between items-center z-40 backdrop-blur-xl border-b transition-colors duration-500 ${settings.theme === 'dark' ? 'border-white/5 bg-black/20' : 'border-black/5 bg-white/20'}`}>
+      <nav className={`fixed top-0 left-0 w-full px-3 sm:px-4 md:px-6 py-3 md:py-4 flex justify-between items-center z-40 backdrop-blur-xl border-b transition-colors duration-500 ${settings.theme === 'dark' ? 'border-white/5 bg-black/20' : 'border-black/5 bg-white/20'}`}>
         <button 
           onClick={onClose}
-          className="text-[10px] tracking-[0.3em] uppercase flex items-center gap-3 hover:text-[#d4af37] transition-colors group"
+          className="text-[10px] tracking-[0.2em] sm:tracking-[0.3em] uppercase flex items-center gap-2 sm:gap-3 hover:text-[#d4af37] transition-colors group"
         >
-          <span className="text-lg group-hover:-translate-x-1 transition-transform">←</span> Return
+          <span className="text-base sm:text-lg group-hover:-translate-x-1 transition-transform">←</span> Return
         </button>
         <div className="hidden md:block text-[11px] uppercase tracking-[0.6em] text-[#d4af37] font-bold">
           Goddy Ora Presents
@@ -139,12 +177,12 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
       {showSettings && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md" onClick={() => setShowSettings(false)}>
           <div 
-            className="bg-[#161616] text-white p-10 rounded-sm shadow-2xl w-full max-w-sm border border-[#d4af37]/20"
+            className="bg-[#161616] text-white p-6 sm:p-8 md:p-10 rounded-sm shadow-2xl w-full max-w-sm border border-[#d4af37]/20"
             onClick={e => e.stopPropagation()}
           >
-            <h3 className="text-2xl font-['Playfair_Display'] mb-8 text-[#d4af37] italic">Archive Settings</h3>
+            <h3 className="text-xl sm:text-2xl font-['Playfair_Display'] mb-6 sm:mb-8 text-[#d4af37] italic">Archive Settings</h3>
             
-            <div className="space-y-8">
+            <div className="space-y-6 sm:space-y-8">
               <div>
                 <label className="block text-[10px] uppercase tracking-[0.2em] text-gray-500 mb-4">Aura</label>
                 <div className="flex gap-6">
@@ -161,7 +199,7 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
               <div>
                 <label className="block text-[10px] uppercase tracking-[0.2em] text-gray-500 mb-4">Text Scale</label>
                 <input 
-                  type="range" min="16" max="32" value={settings.fontSize}
+                  type="range" min={fontRange.min} max={fontRange.max} value={settings.fontSize}
                   onChange={e => setSettings({ ...settings, fontSize: parseInt(e.target.value) })}
                   className="w-full h-1 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-[#d4af37]"
                 />
@@ -179,38 +217,38 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
       )}
 
       {/* Main Content Area - Styled like a professional Folio Page */}
-      <main className="max-w-5xl mx-auto px-4 pt-48 protected-text">
-        <div className={`relative p-10 md:p-32 rounded-sm border transition-colors duration-700 ${getPageClasses()}`}>
-          <header className="mb-24 text-center">
-            <h1 className={`text-5xl md:text-8xl font-['Playfair_Display'] leading-tight mb-8 ${getTitleColor()}`}>
+      <main className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 pt-28 sm:pt-36 md:pt-44 lg:pt-48 protected-text">
+        <div className={`relative p-6 sm:p-8 md:p-14 lg:p-24 rounded-sm border transition-colors duration-700 ${getPageClasses()}`}>
+          <header className="mb-14 sm:mb-16 md:mb-24 text-center">
+            <h1 className={`text-3xl sm:text-5xl md:text-7xl lg:text-8xl font-['Playfair_Display'] leading-tight mb-6 sm:mb-8 ${getTitleColor()}`}>
               {chapter.title}
             </h1>
             <div className="w-24 h-px bg-current mx-auto opacity-10"></div>
           </header>
 
           <article 
-            className="font-['EB_Garamond'] text-justify selection:bg-[#d4af37]/30 whitespace-pre-wrap"
+            className="font-['EB_Garamond'] text-left md:text-justify selection:bg-[#d4af37]/30 whitespace-pre-wrap"
             style={{ 
               fontSize: `${settings.fontSize}px`, 
               lineHeight: settings.lineHeight 
             }}
           >
             {chapter.content.split('\n\n').map((para, i) => (
-              <p key={i} className="mb-10 indent-12 first:indent-0 animate-fadeIn opacity-0 [animation-fill-mode:forwards]" style={{ animationDelay: `${i * 0.02}s` }}>
+              <p key={i} className="mb-7 md:mb-10 indent-0 md:indent-12 first:indent-0 animate-fadeIn opacity-0 [animation-fill-mode:forwards]" style={{ animationDelay: `${i * 0.02}s` }}>
                 {para}
               </p>
             ))}
           </article>
 
           {/* Footer Navigation within the Folio */}
-          <div className="mt-48 border-t border-current/5 pt-20 flex justify-between items-center">
+          <div className="mt-20 md:mt-32 lg:mt-48 border-t border-current/5 pt-10 md:pt-16 lg:pt-20 flex justify-between items-center gap-6">
             <button 
               disabled={currentChapterIndex === 0}
               onClick={() => { setCurrentChapterIndex(prev => prev - 1); window.scrollTo(0, 0); }}
               className={`flex flex-col items-start gap-2 transition-all ${currentChapterIndex === 0 ? 'opacity-5 pointer-events-none' : 'hover:translate-x-[-8px]'}`}
             >
               <span className="text-[10px] uppercase tracking-[0.4em] opacity-40">Previous</span>
-              <span className="text-2xl font-['Playfair_Display'] italic">Turn Back</span>
+              <span className="text-lg sm:text-xl md:text-2xl font-['Playfair_Display'] italic">Turn Back</span>
             </button>
             
             <button 
@@ -219,7 +257,7 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
               className={`flex flex-col items-end gap-2 text-right transition-all ${currentChapterIndex === book.chapters.length - 1 ? 'opacity-5 pointer-events-none' : 'hover:translate-x-[8px]'}`}
             >
               <span className="text-[10px] uppercase tracking-[0.4em] opacity-40">Next</span>
-              <span className="text-2xl font-['Playfair_Display'] italic">Turn Page</span>
+              <span className="text-lg sm:text-xl md:text-2xl font-['Playfair_Display'] italic">Turn Page</span>
             </button>
           </div>
         </div>

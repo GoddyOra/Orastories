@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { GeminiService } from '../services/geminiService';
+import { OrastoriesAIService } from '../services/orastoriesAIService';
 
 interface AIAssistantProps {
   chapterContent: string;
@@ -21,11 +21,22 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ chapterContent }) => {
     setHistory(prev => [...prev, { role: 'user', text: userText }]);
     setIsLoading(true);
 
-    const gemini = new GeminiService();
-    const result = await gemini.discussChapter(chapterContent, userText);
-    
-    setHistory(prev => [...prev, { role: 'ai', text: result || '' }]);
-    setIsLoading(false);
+    try {
+      const aiService = new OrastoriesAIService();
+      const result = await aiService.discussChapter(chapterContent, userText);
+      setHistory(prev => [...prev, { role: 'ai', text: result || '' }]);
+    } catch (error) {
+      console.error('AIAssistant request failed:', error);
+      setHistory(prev => [
+        ...prev,
+        {
+          role: 'ai',
+          text: 'Something went wrong while fetching the response. Please try again.'
+        }
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

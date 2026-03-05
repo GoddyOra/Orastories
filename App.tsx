@@ -5,12 +5,19 @@ import { Book, ThemeMode } from './types';
 
 const App: React.FC = () => {
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
-  const [theme, setTheme] = useState<ThemeMode>('light');
+  const [theme, setTheme] = useState<ThemeMode>(() => {
+    if (typeof window === 'undefined') return 'light';
+    return localStorage.getItem('darkMode') === 'true' ? 'dark' : 'light';
+  });
 
   // Smooth scroll behavior
   useEffect(() => {
     document.documentElement.style.scrollBehavior = 'smooth';
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('darkMode', theme === 'dark' ? 'true' : 'false');
+  }, [theme]);
 
   const toggleTheme = () => {
     setTheme(prev => prev === 'light' ? 'dark' : 'light');
@@ -20,10 +27,10 @@ const App: React.FC = () => {
     <div className={`min-h-screen transition-colors duration-500 ${theme === 'light' ? 'bg-[#fcfaf7] text-[#1a1a1a]' : 'bg-[#0f0f0f] text-[#e0e0e0]'}`}>
       {!selectedBook ? (
         <>
-          <div className="fixed top-8 right-8 z-50">
+          <div className="fixed top-4 right-4 md:top-8 md:right-8 z-50">
             <button 
               onClick={toggleTheme}
-              className={`p-3 rounded-full shadow-xl transition-all hover:scale-110 active:scale-95 border ${theme === 'light' ? 'bg-white border-gray-200 text-gray-800' : 'bg-[#1a1a1a] border-white/10 text-[#d4af37]'}`}
+              className={`p-2.5 md:p-3 rounded-full shadow-xl transition-all hover:scale-110 active:scale-95 border ${theme === 'light' ? 'bg-white border-gray-200 text-gray-800' : 'bg-[#1a1a1a] border-white/10 text-[#d4af37]'}`}
               title={theme === 'light' ? "Switch to Dark Mode" : "Switch to Light Mode"}
             >
               {theme === 'light' ? <MoonIcon /> : <SunIcon />}
