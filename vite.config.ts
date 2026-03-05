@@ -5,7 +5,9 @@ import react from '@vitejs/plugin-react';
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
     return {
-      base: mode === 'production' ? '/Orastories/' : '/',
+      // Use relative asset paths in production so GitHub Pages serves
+      // correctly for project sites regardless of repo path casing.
+      base: mode === 'production' ? './' : '/',
       server: {
         port: 3000,
         host: '0.0.0.0',
