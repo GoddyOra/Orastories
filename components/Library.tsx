@@ -1,9 +1,9 @@
 import React from 'react';
-import { Book, ThemeMode } from '../types';
-import { BOOKS } from '../constants';
+import { ThemeMode } from '../types';
+import { BOOKS, BookCatalogItem } from '../constants';
 
 interface LibraryProps {
-  onSelectBook: (book: Book) => void;
+  onSelectBook: (book: BookCatalogItem) => void;
   theme: ThemeMode;
 }
 
