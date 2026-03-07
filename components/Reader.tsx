@@ -131,7 +131,30 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
 
   const handleAuraChange = (t: ThemeMode) => {
     setSettings(prev => ({ ...prev, theme: t }));
-    onThemeChange(t);
+    if (t === 'light' || t === 'dark') {
+      onThemeChange(t);
+    }
+  };
+
+  const isSceneSubtitle = (paragraph: string) => {
+    const text = paragraph.trim();
+    if (!text) return false;
+    if (/[.!?]$/.test(text)) return false;
+    if (!/[;,]/.test(text)) return false;
+    if (/^[•❖-]/.test(text)) return false;
+    const wordCount = text.split(/\s+/).length;
+    return wordCount >= 2 && wordCount <= 12;
+  };
+
+  const isWhenLoveSectionHeading = (paragraph: string) => {
+    if (book.id !== 'when-love-starts-to-hurt') return false;
+    const text = paragraph.trim();
+    if (!text) return false;
+    if (/^[•❖-]/.test(text)) return false;
+    if (/[.!?]$/.test(text)) return false;
+    const wordCount = text.split(/\s+/).length;
+    if (wordCount < 2 || wordCount > 14) return false;
+    return /^[A-Z0-9][A-Za-z0-9“”"'(),:&/ -]+:?$/.test(text);
   };
 
   return (
@@ -254,11 +277,27 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
               lineHeight: settings.lineHeight 
             }}
           >
-            {chapter.content.split('\n\n').map((para, i) => (
-              <p key={i} className="mb-7 md:mb-10 indent-0 md:indent-12 first:indent-0 animate-fadeIn opacity-0 [animation-fill-mode:forwards]" style={{ animationDelay: `${i * 0.02}s` }}>
-                {para}
-              </p>
-            ))}
+            {chapter.content.split('\n\n').map((para, i) => {
+              const paragraph = para.trim();
+              const sectionHeading = isWhenLoveSectionHeading(paragraph);
+              const sceneSubtitle = !sectionHeading && isSceneSubtitle(paragraph);
+
+              return (
+                <p
+                  key={i}
+                  className={
+                    sectionHeading
+                      ? "mb-5 md:mb-7 font-['Playfair_Display'] font-bold text-xl md:text-2xl leading-snug"
+                      : sceneSubtitle
+                        ? 'mb-6 md:mb-8 italic text-center font-semibold opacity-85 tracking-[0.02em]'
+                        : 'mb-7 md:mb-10 indent-0 md:indent-12 animate-fadeIn opacity-0 [animation-fill-mode:forwards]'
+                  }
+                  style={sectionHeading || sceneSubtitle ? undefined : { animationDelay: `${i * 0.02}s` }}
+                >
+                  {paragraph}
+                </p>
+              );
+            })}
           </article>
 
           {/* Footer Navigation within the Folio */}
