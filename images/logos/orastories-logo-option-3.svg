@@ -1,0 +1,14 @@
+<svg width="760" height="220" viewBox="0 0 760 220" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title3 desc3">
+  <title id="title3">Orastories logo option 3</title>
+  <desc id="desc3">Minimal line icon with book spine and modern serif wordmark.</desc>
+  <rect width="760" height="220" fill="transparent"/>
+  <g transform="translate(52 42)">
+    <rect x="14" y="22" width="128" height="128" rx="26" stroke="#111827" stroke-width="4"/>
+    <path d="M44 122V54C62 50 78 50 94 54V122C78 118 62 118 44 122Z" stroke="#111827" stroke-width="4" fill="none"/>
+    <path d="M94 122V54C110 50 126 50 142 54V122C126 118 110 118 94 122Z" transform="translate(-18 0)" stroke="#111827" stroke-width="4" fill="none"/>
+    <line x1="85" y1="52" x2="85" y2="122" stroke="#B45309" stroke-width="4"/>
+  </g>
+  <text x="226" y="102" fill="#111827" font-family="'Cormorant Garamond', 'Playfair Display', Georgia, serif" font-size="72" font-weight="600" letter-spacing="0.4">Orastories</text>
+  <text x="228" y="140" fill="#111827" font-family="'Montserrat', Arial, sans-serif" font-size="14" font-weight="600" letter-spacing="3">CONTEMPORARY FICTION</text>
+  <circle cx="214" cy="136" r="3" fill="#B45309"/>
+</svg>

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Orastories | Perfect Food Menu for Your Dog</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Montserrat:wght@300;400;600&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
+  <style>
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #fcfaf7; }
+    ::-webkit-scrollbar-thumb { background: #d1d1d1; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #b1b1b1; }
+    body { overflow-x: hidden; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+    .dark-mode ::-webkit-scrollbar-track { background: #0f0f0f; }
+    .article-content p { margin-bottom: 1rem; line-height: 1.85; }
+    .article-content h2 { margin-top: 2rem; margin-bottom: 0.8rem; }
+  </style>
+</head>
+<body id="dogBody" class="bg-[#fcfaf7] text-[#1a1a1a] font-['Montserrat'] transition-colors duration-500">
+  <nav class="fixed top-0 left-0 right-0 bg-white/95 dark-mode:bg-black/95 backdrop-blur z-50 border-b border-gray-200 dark-mode:border-white/10 transition-colors duration-500">
+    <div class="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-3 md:py-4 flex flex-wrap justify-between items-center gap-3">
+      <a href="index.html" class="inline-flex items-center transition-opacity hover:opacity-90" aria-label="Orastories Home">
+        <img src="images/logos/orastories-logo-option-2.svg" alt="Orastories" class="h-10 w-auto" />
+      </a>
+      <div class="flex flex-wrap justify-end gap-3 sm:gap-5 md:gap-8 items-center text-sm sm:text-base">
+        <a href="index.html" class="hover:text-amber-700 dark-mode:hover:text-amber-400 transition-colors">Home</a>
+        <a href="about.html" class="hover:text-amber-700 dark-mode:hover:text-amber-400 transition-colors">About</a>
+        <a href="books.html" class="hover:text-amber-700 dark-mode:hover:text-amber-400 transition-colors">Books</a>
+        <a href="reviews.html" class="hover:text-amber-700 dark-mode:hover:text-amber-400 transition-colors">Reviews</a>
+        <a href="blog.html" class="hover:text-amber-700 dark-mode:hover:text-amber-400 transition-colors">Blog</a>
+        <a href="contact.html" class="hover:text-amber-700 dark-mode:hover:text-amber-400 transition-colors">Contact</a>
+        <button id="themeToggle" class="p-2 rounded-full hover:bg-gray-200 dark-mode:hover:bg-gray-800 transition-colors" aria-label="Toggle Theme">
+          <svg id="sunIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <svg id="moonIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-4xl mx-auto px-3 sm:px-4 md:px-6 pb-16">
+    <article class="article-content">
+      <header class="mb-10">
+        <p class="uppercase tracking-[0.22em] text-[11px] text-amber-700 dark-mode:text-amber-400 mb-3">Animal Care . Vet Guide</p>
+        <h1 class="text-4xl md:text-5xl font-['Playfair Display'] font-bold leading-tight dark-mode:text-white">Creating the Perfect Food Menu for Your Pet Dog</h1>
+        <p class="text-sm text-gray-600 dark-mode:text-gray-400 mt-4">Published on January 14, 2026 by Goddy Ora</p>
+      </header>
+
+      <img src="images/blog-archive/dogfood(2).jpg" alt="Dog meal planning cover image" class="w-full rounded-xl border border-black/10 dark-mode:border-white/10 mb-8" loading="lazy">
+
+      <h2 class="text-3xl font-['Playfair Display'] font-bold dark-mode:text-white">What Do Dogs Eat?</h2>
+      <p>Just like humans, dogs have different dietary preferences. A meal your German Shepherd loves may not work for your neighbor's Bulldog. The best way to build the right food timetable for your dog is still to consult a vet. However, if you want to create a practical plan on your own, this guide will help you do it the right way.</p>
+
+      <h2 class="text-3xl font-['Playfair Display'] font-bold dark-mode:text-white">What Is the Natural Diet for Dogs?</h2>
+      <p>In nature, animals are generally grouped as herbivores, carnivores, or omnivores. Herbivores, such as cows and goats, eat only plant-based foods. Carnivores, such as lions and leopards, feed on meat. Omnivores eat both plant-based and animal-based foods.</p>
+      <p>Dogs are omnivores. That means they can eat a broad mix of foods, including both meat and selected plant foods. Still, dogs are not small humans. Their diet has specific limits and nutritional needs, so you cannot treat every human meal as dog-safe.</p>
+
+      <h2 class="text-3xl font-['Playfair Display'] font-bold dark-mode:text-white">How to Build the Right Meal Plan for Your Dog</h2>
+      <p>Now that you know your dog is an omnivore, the next step is deciding on the feeding model. You have two core options:</p>
+      <ul class="list-disc pl-6 space-y-2 mb-4">
+        <li>Dry feed option (kibble diet)</li>
+        <li>Wet feed option (personalized diet)</li>
+      </ul>
+
+      <p>The most convenient option is usually a kibble-based plan. Commercial kibble is designed by animal nutrition manufacturers to meet your dog's dietary requirements. These formulas typically include cooked grains, protein sources, starches, fruits, and vegetables, plus added vitamins and minerals.</p>
+      <p>You can usually find quality products in major stores. Popular options in the U.S. include Purina and Taste of the Wild. In general, higher-quality kibble tends to have a stronger protein profile, while lower-quality formulas may contain a higher starch ratio. Each type has tradeoffs, so do some research before choosing one.</p>
+      <p>Puppies usually need higher-protein formulas to support growth and development. As dogs age, their protein requirements can shift, and many owners move to less protein-dense formulas. One major benefit of the kibble approach is consistency - it reduces the stress of planning every meal from scratch.</p>
+
+      <p>Some owners prefer wet or custom meals. Others include raw meat. While dogs can consume raw meat, there are potential downsides. Raw products may contain preservatives or contaminants, so lightly cooking meat is often safer, especially for young puppies.</p>
+      <p>If you choose a wet-feed approach, follow these guidelines:</p>
+      <ol class="list-decimal pl-6 space-y-2 mb-4">
+        <li>Maintain strong food hygiene during meal prep to reduce food-borne illness risk.</li>
+        <li>When giving bones, use pieces that are too large to be swallowed whole. Bones should be somewhat meaty and cooked to a safe texture.</li>
+        <li>Offer occasional high-value meals such as cooked fish, canned sardines, tuna, or tinned salmon in spring water, but always check for small fish bones first.</li>
+        <li>Balance meals with dog-safe vegetables, such as raw grated carrots and cooked pumpkin.</li>
+        <li>Avoid foods such as chocolate, onions, garlic, salty and fatty foods, raw yeast dough, citrus-heavy fruits, grapes, and milk for dogs with lactose intolerance.</li>
+      </ol>
+
+      <h2 class="text-3xl font-['Playfair Display'] font-bold dark-mode:text-white">How to Know the Right Quantity of Food Your Dog Needs</h2>
+      <p>Even after setting your meal timetable, portion control is critical. The right amount of food matters just as much as the food type itself. Portion size depends on age, breed, body size, and activity level. The goal is to avoid both overfeeding and underfeeding.</p>
+
+      <h2 class="text-3xl font-['Playfair Display'] font-bold dark-mode:text-white">The Young Puppy Stage</h2>
+      <p>At this stage, it is usually best to follow the feeding routine used by the previous breeder, then transition gradually to your own schedule. Feed small portions frequently - up to five times daily in many cases - and keep fresh water available at all times. Replace unfinished water daily. Most dogs should not be introduced to raw or lightly cooked meat until they are older (often around 16 weeks). High-quality, protein-rich kibble is generally ideal during this growth phase.</p>
+
+      <h2 class="text-3xl font-['Playfair Display'] font-bold dark-mode:text-white">The Older Puppy Stage</h2>
+      <p>As puppies develop stronger teeth, you can gradually introduce lightly cooked meats and appropriately sized bones. Feeding frequency can typically reduce to twice per day, while hydration routines remain unchanged. Continue monitoring portions closely, since both overfeeding and underfeeding can affect health. This is also a good stage to increase healthy activity through play and simple exercise routines.</p>
+
+      <h2 class="text-3xl font-['Playfair Display'] font-bold dark-mode:text-white">The Adult Stage</h2>
+      <p>For kibble-fed dogs, many owners transition from high-protein puppy formulas to adult formulas. Most adult dogs do well with one or two meals per day. Monitor body condition regularly for signs of obesity or underweight status. Small and medium breeds are often considered adults around 12 months, while larger breeds may not fully mature until 18 to 24 months. For wet-fed dogs, maintain a balanced combination of grains, vegetables, and meaty bones.</p>
+
+      <h2 class="text-3xl font-['Playfair Display'] font-bold dark-mode:text-white">The Aged Stage</h2>
+      <p>As dogs age, feeding frequency often increases while portion size per meal decreases. Some senior dogs need additional fiber, protein, or other targeted nutrients to maintain comfort and mobility. This stage requires more observation, patience, and support from you than ever.</p>
+
+      <div class="mt-10 pt-6 border-t border-black/10 dark-mode:border-white/10 text-sm text-gray-600 dark-mode:text-gray-400">
+        <p><strong>References:</strong> Verified facts adapted from Wikipedia and veterinarian discussions (including <a href="https://www.petcoach.co/" target="_blank" rel="noopener noreferrer" class="text-amber-700 dark-mode:text-amber-400 hover:underline">PetCoach</a> and <a href="https://www.petforums.co.uk/" target="_blank" rel="noopener noreferrer" class="text-amber-700 dark-mode:text-amber-400 hover:underline">PetForums UK threads</a>).</p>
+      </div>
+    </article>
+  </main>
+
+  <footer class="border-t border-gray-200 dark-mode:border-white/10 mt-16 py-8 text-center text-gray-600 dark-mode:text-gray-400 transition-colors duration-500">
+    <p>&copy; 2026 Orastories. All rights reserved.</p>
+  </footer>
+
+  <script>
+    const themeToggle = document.getElementById('themeToggle');
+    const pageBody = document.getElementById('dogBody');
+    const sunIcon = document.getElementById('sunIcon');
+    const moonIcon = document.getElementById('moonIcon');
+
+    const applyTheme = (isDark) => {
+      if (isDark) {
+        pageBody.classList.add('dark-mode');
+        pageBody.style.backgroundColor = '#0f0f0f';
+        pageBody.style.color = '#e0e0e0';
+        sunIcon.style.display = 'block';
+        moonIcon.style.display = 'none';
+      } else {
+        pageBody.classList.remove('dark-mode');
+        pageBody.style.backgroundColor = '#fcfaf7';
+        pageBody.style.color = '#1a1a1a';
+        sunIcon.style.display = 'none';
+        moonIcon.style.display = 'block';
+      }
+    };
+
+    applyTheme(localStorage.getItem('darkMode') === 'true');
+    themeToggle.addEventListener('click', () => {
+      const nextDark = !pageBody.classList.contains('dark-mode');
+      localStorage.setItem('darkMode', String(nextDark));
+      applyTheme(nextDark);
+    });
+  </script>
+  <script type="module" src="scripts/navigation.js"></script>
+</body>
+</html>

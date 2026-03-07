@@ -10,6 +10,10 @@ const distDir = path.join(rootDir, 'dist');
 const staticPages = [
   'about.html',
   'blog.html',
+  'blog-best-programming-language-2026.html',
+  'blog-perfect-food-menu-pet-dog-2026.html',
+  'blog-python-syntaxerror-unexpected-eof-guide-2026.html',
+  'blog-writing-101-profitable-writer-2026.html',
   'books.html',
   'reviews.html',
   'contact.html'

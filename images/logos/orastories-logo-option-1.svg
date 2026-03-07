@@ -1,0 +1,14 @@
+<svg width="760" height="220" viewBox="0 0 760 220" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title1 desc1">
+  <title id="title1">Orastories logo option 1</title>
+  <desc id="desc1">Minimal circular monogram with quill mark and wordmark.</desc>
+  <rect width="760" height="220" fill="transparent"/>
+  <g transform="translate(48 34)">
+    <circle cx="72" cy="76" r="60" stroke="#111827" stroke-width="4"/>
+    <path d="M58 109L103 52C96 50 86 52 79 59L48 90L58 109Z" fill="#111827"/>
+    <path d="M58 109L46 119L62 123L70 111L58 109Z" fill="#B45309"/>
+    <path d="M82 74L96 88" stroke="white" stroke-width="3" stroke-linecap="round"/>
+    <path d="M74 82L88 96" stroke="white" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <text x="196" y="112" fill="#111827" font-family="'Playfair Display', Georgia, serif" font-size="72" font-weight="700" letter-spacing="0.5">Orastories</text>
+  <text x="199" y="145" fill="#B45309" font-family="'Montserrat', Arial, sans-serif" font-size="16" font-weight="600" letter-spacing="4">FICTION WRITING</text>
+</svg>
