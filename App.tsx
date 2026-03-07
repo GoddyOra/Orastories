@@ -17,29 +17,50 @@ const App: React.FC = () => {
 
   useEffect(() => {
     localStorage.setItem('darkMode', theme === 'dark' ? 'true' : 'false');
+    window.dispatchEvent(new CustomEvent('orastories-theme-change', { detail: { theme } }));
   }, [theme]);
 
-  const toggleTheme = () => {
-    setTheme(prev => prev === 'light' ? 'dark' : 'light');
-  };
+  useEffect(() => {
+    const handleExternalThemeChange = (event: Event) => {
+      const customEvent = event as CustomEvent<{ theme?: ThemeMode }>;
+      const nextTheme = customEvent.detail?.theme;
+      if (!nextTheme) return;
+      setTheme(prev => (prev === nextTheme ? prev : nextTheme));
+    };
+
+    window.addEventListener('orastories-theme-change', handleExternalThemeChange as EventListener);
+    return () => window.removeEventListener('orastories-theme-change', handleExternalThemeChange as EventListener);
+  }, []);
+
+  useEffect(() => {
+    const siteNav = document.getElementById('siteNavBar') || document.querySelector('body > nav');
+    const contentWrapper = document.getElementById('contentWrapper');
+    const navElement = siteNav instanceof HTMLElement ? siteNav : null;
+    const wrapperElement = contentWrapper instanceof HTMLElement ? contentWrapper : null;
+
+    if (!navElement) return;
+
+    if (selectedBook) {
+      navElement.style.display = 'none';
+      navElement.setAttribute('aria-hidden', 'true');
+      if (wrapperElement) wrapperElement.style.paddingTop = '0px';
+      return;
+    }
+
+    navElement.style.display = '';
+    navElement.removeAttribute('aria-hidden');
+    if (wrapperElement) wrapperElement.style.paddingTop = '';
+    window.dispatchEvent(new Event('resize'));
+  }, [selectedBook]);
 
   return (
     <div className={`min-h-screen transition-colors duration-500 ${theme === 'light' ? 'bg-[#fcfaf7] text-[#1a1a1a]' : 'bg-[#0f0f0f] text-[#e0e0e0]'}`}>
       {!selectedBook ? (
         <>
-          <div className="fixed top-4 right-4 md:top-8 md:right-8 z-50">
-            <button 
-              onClick={toggleTheme}
-              className={`p-2.5 md:p-3 rounded-full shadow-xl transition-all hover:scale-110 active:scale-95 border ${theme === 'light' ? 'bg-white border-gray-200 text-gray-800' : 'bg-[#1a1a1a] border-white/10 text-[#d4af37]'}`}
-              title={theme === 'light' ? "Switch to Dark Mode" : "Switch to Light Mode"}
-            >
-              {theme === 'light' ? <MoonIcon /> : <SunIcon />}
-            </button>
-          </div>
           <Library onSelectBook={setSelectedBook} theme={theme} />
         </>
       ) : (
-        <div className="animate-fadeIn">
+        <div className="animate-readerFadeIn">
           <Reader 
             book={selectedBook} 
             onClose={() => setSelectedBook(null)} 
@@ -64,21 +85,16 @@ const App: React.FC = () => {
         .animate-slideUp {
           animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
+        @keyframes readerFadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        .animate-readerFadeIn {
+          animation: readerFadeIn 0.3s ease-out forwards;
+        }
       `}</style>
     </div>
   );
 };
-
-const SunIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-  </svg>
-);
-
-const MoonIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-  </svg>
-);
 
 export default App;

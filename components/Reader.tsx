@@ -145,37 +145,59 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
         />
       </div>
 
-      {/* Reader Nav */}
-      <nav className={`fixed top-0 left-0 w-full px-3 sm:px-4 md:px-6 py-3 md:py-4 flex justify-between items-center z-40 backdrop-blur-xl border-b transition-colors duration-500 ${settings.theme === 'dark' ? 'border-white/5 bg-black/20' : 'border-black/5 bg-white/20'}`}>
-        <button 
+      {/* Reader Controls */}
+      <div className="fixed top-3 left-3 right-3 z-[90] flex items-center justify-between pointer-events-none">
+        <button
           onClick={onClose}
-          className="text-[10px] tracking-[0.2em] sm:tracking-[0.3em] uppercase flex items-center gap-2 sm:gap-3 hover:text-[#d4af37] transition-colors group"
+          className={`pointer-events-auto inline-flex items-center gap-2 rounded-full border px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold tracking-[0.12em] uppercase backdrop-blur-md transition-colors shadow-sm ${
+            settings.theme === 'dark'
+              ? 'bg-[#141414]/95 border-white/15 text-white hover:text-[#d4af37] hover:border-[#d4af37]/50'
+              : settings.theme === 'sepia'
+                ? 'bg-[#fcf8ed]/95 border-[#d9c8a3] text-[#5b4636] hover:text-[#8b4513] hover:border-[#8b4513]/40'
+                : 'bg-white/95 border-black/10 text-[#1a1a1a] hover:text-[#8b4513] hover:border-[#8b4513]/40'
+          }`}
         >
-          <span className="text-base sm:text-lg group-hover:-translate-x-1 transition-transform">←</span> Return
+          <span className="text-base leading-none">←</span>
+          Return
         </button>
-        <div className="hidden md:block text-[11px] uppercase tracking-[0.6em] text-[#d4af37] font-bold">
+
+        <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 hidden md:block max-w-[42vw] truncate rounded-full border px-4 py-2 text-[11px] uppercase tracking-[0.38em] font-bold backdrop-blur-md text-[#d4af37] border-[#d4af37]/30 bg-black/35">
           Goddy Ora Presents
         </div>
-        <div className="flex items-center gap-2">
-          <button 
+
+        <div className="pointer-events-auto flex items-center gap-2">
+          <button
             onClick={() => handleAuraChange(settings.theme === 'light' ? 'dark' : 'light')}
-            className={`p-2 rounded-full transition-colors ${settings.theme === 'dark' ? 'hover:bg-white/10' : 'hover:bg-black/10'}`}
+            className={`p-2.5 rounded-full border backdrop-blur-md transition-colors shadow-sm ${
+              settings.theme === 'dark'
+                ? 'bg-[#141414]/95 border-white/15 text-white hover:text-[#d4af37] hover:border-[#d4af37]/50'
+                : settings.theme === 'sepia'
+                  ? 'bg-[#fcf8ed]/95 border-[#d9c8a3] text-[#5b4636] hover:text-[#8b4513] hover:border-[#8b4513]/40'
+                  : 'bg-white/95 border-black/10 text-[#1a1a1a] hover:text-[#8b4513] hover:border-[#8b4513]/40'
+            }`}
             title="Toggle Light/Dark Mode"
           >
             {settings.theme === 'light' ? <MoonIcon /> : <SunIcon />}
           </button>
-          <button 
+          <button
             onClick={() => setShowSettings(!showSettings)}
-            className={`p-2 rounded-full transition-colors ${settings.theme === 'dark' ? 'hover:bg-white/10' : 'hover:bg-black/10'}`}
+            className={`p-2.5 rounded-full border backdrop-blur-md transition-colors shadow-sm ${
+              settings.theme === 'dark'
+                ? 'bg-[#141414]/95 border-white/15 text-white hover:text-[#d4af37] hover:border-[#d4af37]/50'
+                : settings.theme === 'sepia'
+                  ? 'bg-[#fcf8ed]/95 border-[#d9c8a3] text-[#5b4636] hover:text-[#8b4513] hover:border-[#8b4513]/40'
+                  : 'bg-white/95 border-black/10 text-[#1a1a1a] hover:text-[#8b4513] hover:border-[#8b4513]/40'
+            }`}
+            title="Reader Settings"
           >
             <SettingsIcon />
           </button>
         </div>
-      </nav>
+      </div>
 
       {/* Settings Modal */}
       {showSettings && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md" onClick={() => setShowSettings(false)}>
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md" onClick={() => setShowSettings(false)}>
           <div 
             className="bg-[#161616] text-white p-6 sm:p-8 md:p-10 rounded-sm shadow-2xl w-full max-w-sm border border-[#d4af37]/20"
             onClick={e => e.stopPropagation()}

@@ -11,6 +11,104 @@
   const linkGroup = Array.from(container.children).find((node) => node.tagName === 'DIV');
   if (!linkGroup) return;
 
+  nav.id = 'siteNavBar';
+  container.id = 'siteNavInner';
+  brand.id = 'siteNavBrand';
+
+  const styleId = 'orastories-nav-style';
+  if (!document.getElementById(styleId)) {
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = `
+      #siteNavBar { will-change: transform; }
+      #siteNavInner {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.75rem;
+      }
+      #siteNavBrand { white-space: nowrap; }
+      #siteNavControls {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      #siteNavLinks {
+        display: flex;
+        width: 100%;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 1rem;
+      }
+      #siteNavLinks a {
+        white-space: nowrap;
+        border-bottom: 1px solid transparent;
+      }
+      #siteNavLinks a[aria-current="page"] { border-bottom-color: currentColor; }
+      #navCollapseToggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      #themeToggle.is-mobile-theme-toggle {
+        position: fixed;
+        right: 0.9rem;
+        bottom: 0.9rem;
+        z-index: 95;
+        border: 1px solid rgba(17, 24, 39, 0.12);
+        border-radius: 9999px;
+        background: rgba(255, 255, 255, 0.92);
+        backdrop-filter: blur(8px);
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
+        animation: themeFabFloat 2.6s ease-in-out infinite;
+      }
+      .dark-mode #themeToggle.is-mobile-theme-toggle {
+        border-color: rgba(255, 255, 255, 0.18);
+        background: rgba(15, 15, 15, 0.88);
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.42);
+      }
+      @keyframes themeFabFloat {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-2px); }
+      }
+      @media (max-width: 1023px) {
+        #siteNavInner { align-items: flex-start; }
+        #siteNavLinks {
+          overflow-x: auto;
+          overflow-y: hidden;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+          padding-bottom: 0.2rem;
+        }
+        #siteNavLinks::-webkit-scrollbar { display: none; }
+      }
+      @media (min-width: 1024px) {
+        #siteNavInner {
+          flex-wrap: nowrap;
+          justify-content: center;
+          align-items: center;
+          gap: 1rem;
+        }
+        #siteNavBrand { order: 1; }
+        #siteNavControls {
+          order: 3;
+          margin-left: 0;
+        }
+        #siteNavLinks {
+          order: 2;
+          width: auto;
+          margin: 0 auto;
+          flex-direction: row;
+          align-items: center;
+          justify-content: center;
+          gap: 1.25rem;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
   nav.classList.add('transition-transform', 'duration-300');
   linkGroup.classList.add(
     'w-full',
@@ -24,9 +122,11 @@
 
   const themeToggle = linkGroup.querySelector('#themeToggle');
   const contentStart = document.querySelector('#contentWrapper, main');
+  const mobileMediaQuery = window.matchMedia('(max-width: 767px)');
 
   const controls = document.createElement('div');
-  controls.className = 'ml-auto flex items-center gap-2';
+  controls.id = 'siteNavControls';
+  controls.className = 'flex items-center gap-2';
 
   const collapseBtn = document.createElement('button');
   collapseBtn.id = 'navCollapseToggle';
@@ -100,11 +200,35 @@
     window.setTimeout(syncContentOffset, 320);
   };
 
+  const syncThemeTogglePlacement = () => {
+    if (!themeToggle) return;
+
+    if (mobileMediaQuery.matches) {
+      if (themeToggle.parentElement !== document.body) {
+        document.body.appendChild(themeToggle);
+      }
+      themeToggle.classList.add('is-mobile-theme-toggle');
+      return;
+    }
+
+    if (themeToggle.parentElement !== controls) {
+      controls.prepend(themeToggle);
+    }
+    themeToggle.classList.remove('is-mobile-theme-toggle');
+  };
+
   collapseBtn.addEventListener('click', () => setCollapsed(!collapsed));
   setCollapsed(collapsed);
+  syncThemeTogglePlacement();
   queueOffsetSync();
 
   window.addEventListener('resize', queueOffsetSync);
+  window.addEventListener('resize', syncThemeTogglePlacement);
+  if (typeof mobileMediaQuery.addEventListener === 'function') {
+    mobileMediaQuery.addEventListener('change', syncThemeTogglePlacement);
+  } else if (typeof mobileMediaQuery.addListener === 'function') {
+    mobileMediaQuery.addListener(syncThemeTogglePlacement);
+  }
 
   let previousScrollY = window.scrollY;
   window.addEventListener(

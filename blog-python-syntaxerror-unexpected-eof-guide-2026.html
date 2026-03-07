@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Orastories | Python SyntaxError Unexpected EOF Guide</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Montserrat:wght@300;400;600&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
+  <style>
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #fcfaf7; }
+    ::-webkit-scrollbar-thumb { background: #d1d1d1; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #b1b1b1; }
+    body { overflow-x: hidden; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+    .dark-mode ::-webkit-scrollbar-track { background: #0f0f0f; }
+    .article-content p { margin-bottom: 1rem; line-height: 1.85; }
+    .article-content h2 { margin-top: 2rem; margin-bottom: 0.8rem; }
+    .article-content h3 { margin-top: 1.4rem; margin-bottom: 0.6rem; }
+  </style>
+</head>
+<body id="syntaxBody" class="bg-[#fcfaf7] text-[#1a1a1a] font-['Montserrat'] transition-colors duration-500">
+  <nav class="fixed top-0 left-0 right-0 bg-white/95 dark-mode:bg-black/95 backdrop-blur z-50 border-b border-gray-200 dark-mode:border-white/10 transition-colors duration-500">
+    <div class="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-3 md:py-4 flex flex-wrap justify-between items-center gap-3">
+      <a href="index.html" class="inline-flex items-center transition-opacity hover:opacity-90" aria-label="Orastories Home">
+        <img src="images/logos/orastories-logo-option-2.svg" alt="Orastories" class="h-10 w-auto" />
+      </a>
+      <div class="flex flex-wrap justify-end gap-3 sm:gap-5 md:gap-8 items-center text-sm sm:text-base">
+        <a href="index.html" class="hover:text-amber-700 dark-mode:hover:text-amber-400 transition-colors">Home</a>
+        <a href="about.html" class="hover:text-amber-700 dark-mode:hover:text-amber-400 transition-colors">About</a>
+        <a href="books.html" class="hover:text-amber-700 dark-mode:hover:text-amber-400 transition-colors">Books</a>
+        <a href="reviews.html" class="hover:text-amber-700 dark-mode:hover:text-amber-400 transition-colors">Reviews</a>
+        <a href="blog.html" class="hover:text-amber-700 dark-mode:hover:text-amber-400 transition-colors">Blog</a>
+        <a href="contact.html" class="hover:text-amber-700 dark-mode:hover:text-amber-400 transition-colors">Contact</a>
+        <button id="themeToggle" class="p-2 rounded-full hover:bg-gray-200 dark-mode:hover:bg-gray-800 transition-colors" aria-label="Toggle Theme">
+          <svg id="sunIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <svg id="moonIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-4xl mx-auto px-3 sm:px-4 md:px-6 pb-16">
+    <article class="article-content">
+      <header class="mb-10">
+        <p class="uppercase tracking-[0.22em] text-[11px] text-amber-700 dark-mode:text-amber-400 mb-3">Technology . Programming</p>
+        <h1 class="text-4xl md:text-5xl font-['Playfair Display'] font-bold leading-tight dark-mode:text-white">Python SyntaxError: Unexpected EOF While Parsing - Solution Guide</h1>
+        <p class="text-sm text-gray-600 dark-mode:text-gray-400 mt-4">Published on March 2, 2026 by Goddy Ora</p>
+      </header>
+
+      <img src="images/blog-archive/python-syntax-main-2026.jpg" alt="Laptop screen displaying Python code" class="w-full rounded-xl border border-black/10 dark-mode:border-white/10 mb-8" loading="lazy">
+
+      <p>Have you spent a significant amount of time working on your Python code, only to keep seeing this message every time you hit Run: <strong>SyntaxError: unexpected EOF while parsing</strong>? Don't panic. This guide covers the most common causes of this error and how to fix each one quickly.</p>
+      <p>Python is strict about syntax. When your code format is incomplete or malformed, Python raises a <code>SyntaxError</code>. The <code>unexpected EOF</code> variant appears when the interpreter reaches the end of your file before a code block has been properly completed. EOF stands for <em>End of File</em>.</p>
+      <p>The most common causes are:</p>
+      <ul class="list-disc pl-6 space-y-2 mb-4">
+        <li>Incomplete <code>if</code> or loop statements</li>
+        <li>Missing parentheses or too many parentheses</li>
+        <li>Using <code>try</code> without an accompanying <code>except</code> or <code>finally</code> block</li>
+        <li>Executing code line by line in the Python console when a full block is required</li>
+      </ul>
+
+      <h2 class="text-3xl font-['Playfair Display'] font-bold dark-mode:text-white">1) Incomplete If or Loop Statements</h2>
+      <p><code>if</code> statements and loop statements such as <code>for</code> and <code>while</code> require at least one valid instruction in their indented block. If you end a loop or condition without a body, Python raises <code>SyntaxError: unexpected EOF while parsing</code>.</p>
+      <p>For example, this incomplete loop will fail:</p>
+      <img src="images/blog-archive/image001.png" alt="Incomplete for loop" class="w-full rounded border border-black/10 dark-mode:border-white/10 mb-4" loading="lazy">
+      <p>Terminal result:</p>
+      <img src="images/blog-archive/image001b.png" alt="Terminal error for incomplete for loop" class="w-full rounded border border-black/10 dark-mode:border-white/10 mb-4" loading="lazy">
+      <p>To fix it, add a valid line under the loop, such as a <code>print()</code> statement:</p>
+      <img src="images/blog-archive/image002.png" alt="Completed for loop code" class="w-full rounded border border-black/10 dark-mode:border-white/10 mb-4" loading="lazy">
+      <p>Terminal result:</p>
+      <img src="images/blog-archive/image002b.png" alt="For loop terminal output" class="w-full rounded border border-black/10 dark-mode:border-white/10 mb-4" loading="lazy">
+      <p>The same issue occurs with incomplete <code>if/else</code> blocks:</p>
+      <img src="images/blog-archive/image003.png" alt="Incomplete if else block" class="w-full rounded border border-black/10 dark-mode:border-white/10 mb-4" loading="lazy">
+      <p>Terminal result:</p>
+      <img src="images/blog-archive/image003b.png" alt="If else EOF terminal error" class="w-full rounded border border-black/10 dark-mode:border-white/10 mb-4" loading="lazy">
+      <p>Add the missing instruction inside <code>else</code> (or <code>if</code>) and run again:</p>
+      <img src="images/blog-archive/image004.png" alt="Completed if else block" class="w-full rounded border border-black/10 dark-mode:border-white/10 mb-4" loading="lazy">
+      <p>Terminal outputs:</p>
+      <img src="images/blog-archive/image004b.png" alt="If condition terminal output" class="w-full rounded border border-black/10 dark-mode:border-white/10 mb-4" loading="lazy">
+      <img src="images/blog-archive/image004a.png" alt="Else condition terminal output" class="w-full rounded border border-black/10 dark-mode:border-white/10 mb-4" loading="lazy">
+
+      <h3 class="text-2xl font-['Playfair Display'] font-bold dark-mode:text-white">Application of the <code>pass</code> Function</h3>
+      <p>If you do not yet know what logic to add to an <code>if</code> or loop block, use <code>pass</code> as a temporary placeholder. It prevents syntax errors and allows your program structure to run while you continue building the final logic.</p>
+      <img src="images/blog-archive/image0022.png" alt="Using pass in for loop" class="w-full rounded border border-black/10 dark-mode:border-white/10 mb-4" loading="lazy">
+      <p>Terminal result:</p>
+      <img src="images/blog-archive/image0022b.png" alt="Terminal output when using pass" class="w-full rounded border border-black/10 dark-mode:border-white/10 mb-4" loading="lazy">
+
+      <h2 class="text-3xl font-['Playfair Display'] font-bold dark-mode:text-white">2) Missing Parentheses or Too Many Parentheses</h2>
+      <p>If parentheses are unbalanced, Python may throw an unexpected EOF error. This can happen when a closing bracket is missing, or when extra brackets are added accidentally.</p>
+      <p>Example with extra parentheses:</p>
+      <img src="images/blog-archive/image005.png" alt="Code with extra parentheses" class="w-full rounded border border-black/10 dark-mode:border-white/10 mb-4" loading="lazy">
+      <p>Terminal result:</p>
+      <img src="images/blog-archive/image005b.png" alt="Terminal error for extra parentheses" class="w-full rounded border border-black/10 dark-mode:border-white/10 mb-4" loading="lazy">
+      <p>Corrected code:</p>
+      <img src="images/blog-archive/image005d.png" alt="Corrected parentheses code" class="w-full rounded border border-black/10 dark-mode:border-white/10 mb-4" loading="lazy">
+      <p>The same error can appear when a closing parenthesis is missing:</p>
+      <img src="images/blog-archive/image006.png" alt="Code with missing closing parenthesis" class="w-full rounded border border-black/10 dark-mode:border-white/10 mb-4" loading="lazy">
+      <p>Terminal result:</p>
+      <img src="images/blog-archive/image006b.png" alt="Terminal output for missing parenthesis" class="w-full rounded border border-black/10 dark-mode:border-white/10 mb-4" loading="lazy">
+      <p>Always trace the error line, then check for missing or extra parentheses. The same debugging logic also applies to brackets <code>[]</code> and braces <code>{}</code>. Using IDEs with syntax highlighting and linting (such as PyCharm) can help you catch these issues faster.</p>
+
+      <h2 class="text-3xl font-['Playfair Display'] font-bold dark-mode:text-white">3) Using <code>try</code> Without <code>except</code> or <code>finally</code></h2>
+      <p><code>try</code>/<code>except</code> blocks are used for exception handling. Python executes the <code>try</code> block first, then moves to <code>except</code> if an error condition is triggered. If you write <code>try</code> by itself and omit the required continuation block, Python raises the EOF parsing error.</p>
+      <p>Example of incomplete <code>try</code> usage:</p>
+      <img src="images/blog-archive/image007.png" alt="Try block without except" class="w-full rounded border border-black/10 dark-mode:border-white/10 mb-4" loading="lazy">
+      <p>Terminal result:</p>
+      <img src="images/blog-archive/image007b.png" alt="Terminal EOF error for try block" class="w-full rounded border border-black/10 dark-mode:border-white/10 mb-4" loading="lazy">
+      <p>Solution with <code>except</code>:</p>
+      <img src="images/blog-archive/image008.png" alt="Try except solution" class="w-full rounded border border-black/10 dark-mode:border-white/10 mb-4" loading="lazy">
+      <p>Terminal result:</p>
+      <img src="images/blog-archive/image008b.png" alt="Try except output" class="w-full rounded border border-black/10 dark-mode:border-white/10 mb-4" loading="lazy">
+      <p>Alternative solution with <code>finally</code>:</p>
+      <img src="images/blog-archive/image009.png" alt="Try finally solution" class="w-full rounded border border-black/10 dark-mode:border-white/10 mb-4" loading="lazy">
+      <p>Terminal result:</p>
+      <img src="images/blog-archive/image009b.png" alt="Try finally output" class="w-full rounded border border-black/10 dark-mode:border-white/10 mb-4" loading="lazy">
+      <p>Both approaches resolve the syntax error, but they serve different runtime behaviors.</p>
+
+      <h2 class="text-3xl font-['Playfair Display'] font-bold dark-mode:text-white">4) Executing Code Line by Line in the Python Console</h2>
+      <p>This usually happens when someone runs a block statement line by line instead of entering the full block. Single-line statements run fine, for example:</p>
+      <pre class="bg-black/5 dark-mode:bg-white/10 rounded p-4 text-sm overflow-x-auto mb-4"><code>&gt;&gt;&gt; a = 3
+&gt;&gt;&gt; print(a**3)
+
+Terminal&gt;&gt;&gt; 27</code></pre>
+      <p>But block statements (such as loops) fail if you enter only the first line:</p>
+      <pre class="bg-black/5 dark-mode:bg-white/10 rounded p-4 text-sm overflow-x-auto mb-4"><code>&gt;&gt;&gt; for i in range(5):
+
+^
+Terminal&gt;&gt;&gt; SyntaxError: unexpected EOF while parsing</code></pre>
+      <p>To avoid this, enter the complete block before execution:</p>
+      <pre class="bg-black/5 dark-mode:bg-white/10 rounded p-4 text-sm overflow-x-auto mb-4"><code>&gt;&gt;&gt; for i in range(5):
+...     print(i, end=', ')
+
+Terminal&gt;&gt;&gt; 0, 1, 2, 3, 4,</code></pre>
+      <p>Once the loop body is included, the error disappears.</p>
+
+      <h2 class="text-3xl font-['Playfair Display'] font-bold dark-mode:text-white">Final Conclusion</h2>
+      <p>The <code>SyntaxError: unexpected EOF while parsing</code> message appears when Python reaches the end of your program before all statements are fully and correctly closed.</p>
+      <p>To fix it, check for incomplete <code>if</code> or loop blocks, mismatched parentheses/brackets/braces, unfinished <code>try</code> blocks, and partial block execution in the console. If you run through those checks in order, you can usually resolve this error quickly and confidently.</p>
+
+    </article>
+  </main>
+
+  <footer class="border-t border-gray-200 dark-mode:border-white/10 mt-16 py-8 text-center text-gray-600 dark-mode:text-gray-400 transition-colors duration-500">
+    <p>&copy; 2026 Orastories. All rights reserved.</p>
+  </footer>
+
+  <script>
+    const themeToggle = document.getElementById('themeToggle');
+    const pageBody = document.getElementById('syntaxBody');
+    const sunIcon = document.getElementById('sunIcon');
+    const moonIcon = document.getElementById('moonIcon');
+
+    const applyTheme = (isDark) => {
+      if (isDark) {
+        pageBody.classList.add('dark-mode');
+        pageBody.style.backgroundColor = '#0f0f0f';
+        pageBody.style.color = '#e0e0e0';
+        sunIcon.style.display = 'block';
+        moonIcon.style.display = 'none';
+      } else {
+        pageBody.classList.remove('dark-mode');
+        pageBody.style.backgroundColor = '#fcfaf7';
+        pageBody.style.color = '#1a1a1a';
+        sunIcon.style.display = 'none';
+        moonIcon.style.display = 'block';
+      }
+    };
+
+    applyTheme(localStorage.getItem('darkMode') === 'true');
+    themeToggle.addEventListener('click', () => {
+      const nextDark = !pageBody.classList.contains('dark-mode');
+      localStorage.setItem('darkMode', String(nextDark));
+      applyTheme(nextDark);
+    });
+  </script>
+  <script type="module" src="scripts/navigation.js"></script>
+</body>
+</html>

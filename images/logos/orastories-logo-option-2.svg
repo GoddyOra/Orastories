@@ -1,0 +1,14 @@
+<svg width="760" height="220" viewBox="0 0 760 220" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title2 desc2">
+  <title id="title2">Orastories logo option 2</title>
+  <desc id="desc2">Minimal open-book emblem with star and clean wordmark.</desc>
+  <rect width="760" height="220" fill="transparent"/>
+  <g transform="translate(52 42)">
+    <path d="M20 112V48C40 42 58 42 78 48V112C58 106 40 106 20 112Z" stroke="#111827" stroke-width="4" fill="none"/>
+    <path d="M78 112V48C98 42 116 42 136 48V112C116 106 98 106 78 112Z" stroke="#111827" stroke-width="4" fill="none"/>
+    <line x1="78" y1="48" x2="78" y2="112" stroke="#111827" stroke-width="4"/>
+    <path d="M78 16L83 28H96L85 36L90 48L78 40L66 48L71 36L60 28H73L78 16Z" fill="#B45309"/>
+  </g>
+  <text x="224" y="108" fill="#111827" font-family="'Playfair Display', Georgia, serif" font-size="68" font-weight="700">Orastories</text>
+  <line x1="226" y1="125" x2="610" y2="125" stroke="#B45309" stroke-width="2"/>
+  <text x="226" y="151" fill="#111827" font-family="'Montserrat', Arial, sans-serif" font-size="15" font-weight="500" letter-spacing="2">STORIES THAT STAY WITH YOU</text>
+</svg>

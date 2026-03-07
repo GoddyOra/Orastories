@@ -47,8 +47,8 @@
 <body id="homeBody" class="bg-[#fcfaf7] text-[#1a1a1a] font-['Montserrat'] transition-colors duration-500">
   <nav class="fixed top-0 left-0 right-0 bg-white/95 dark-mode:bg-black/95 backdrop-blur z-50 border-b border-gray-200 dark-mode:border-white/10 transition-colors duration-500">
     <div class="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-3 md:py-4 flex flex-wrap justify-between items-center gap-3">
-      <a href="index.html" class="text-2xl font-['Playfair Display'] font-bold dark-mode:text-white transition-colors">
-        Orastories
+      <a href="index.html" class="inline-flex items-center transition-opacity hover:opacity-90" aria-label="Orastories Home">
+        <img src="images/logos/orastories-logo-option-2.svg" alt="Orastories" class="h-10 w-auto" />
       </a>
       <div class="flex flex-wrap justify-end gap-3 sm:gap-5 md:gap-8 items-center text-sm sm:text-base">
         <a href="index.html" class="hover:text-amber-700 dark-mode:hover:text-amber-400 transition-colors">Home</a>
@@ -57,6 +57,14 @@
         <a href="reviews.html" class="hover:text-amber-700 dark-mode:hover:text-amber-400 transition-colors">Reviews</a>
         <a href="blog.html" class="hover:text-amber-700 dark-mode:hover:text-amber-400 transition-colors">Blog</a>
         <a href="contact.html" class="hover:text-amber-700 dark-mode:hover:text-amber-400 transition-colors">Contact</a>
+        <button id="themeToggle" class="p-2 rounded-full hover:bg-gray-200 dark-mode:hover:bg-gray-800 transition-colors" aria-label="Toggle Theme">
+          <svg id="sunIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+            <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+          </svg>
+          <svg id="moonIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
       </div>
     </div>
   </nav>
@@ -67,13 +75,58 @@
 
   <script>
     const homeBody = document.getElementById('homeBody');
+    const themeToggle = document.getElementById('themeToggle');
+    const sunIcon = document.getElementById('sunIcon');
+    const moonIcon = document.getElementById('moonIcon');
 
-    const isDarkMode = localStorage.getItem('darkMode') === 'true';
-    if (isDarkMode) {
-      homeBody.classList.add('dark-mode');
-      homeBody.style.backgroundColor = '#0f0f0f';
-      homeBody.style.color = '#e0e0e0';
+    const applyTheme = (isDark) => {
+      if (isDark) {
+        homeBody.classList.add('dark-mode');
+        homeBody.style.backgroundColor = '#0f0f0f';
+        homeBody.style.color = '#e0e0e0';
+        if (sunIcon) sunIcon.style.display = 'block';
+        if (moonIcon) moonIcon.style.display = 'none';
+      } else {
+        homeBody.classList.remove('dark-mode');
+        homeBody.style.backgroundColor = '#fcfaf7';
+        homeBody.style.color = '#1a1a1a';
+        if (sunIcon) sunIcon.style.display = 'none';
+        if (moonIcon) moonIcon.style.display = 'block';
+      }
+    };
+
+    const syncThemeFromStorage = () => {
+      applyTheme(localStorage.getItem('darkMode') === 'true');
+    };
+
+    syncThemeFromStorage();
+
+    if (themeToggle) {
+      themeToggle.addEventListener('click', () => {
+        const nextIsDark = !homeBody.classList.contains('dark-mode');
+        localStorage.setItem('darkMode', String(nextIsDark));
+        applyTheme(nextIsDark);
+        window.dispatchEvent(new CustomEvent('orastories-theme-change', {
+          detail: { theme: nextIsDark ? 'dark' : 'light' }
+        }));
+      });
     }
+
+    window.addEventListener('orastories-theme-change', (event) => {
+      const customEvent = event;
+      const theme = customEvent?.detail?.theme;
+      if (theme === 'dark') {
+        localStorage.setItem('darkMode', 'true');
+        applyTheme(true);
+        return;
+      }
+      if (theme === 'light' || theme === 'sepia') {
+        localStorage.setItem('darkMode', 'false');
+        applyTheme(false);
+        return;
+      }
+      syncThemeFromStorage();
+    });
   </script>
 <script type="importmap">
 {
