@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Book, Chapter, ThemeMode, ReadingSettings } from '../types';
-import AIAssistant from './AIAssistant';
 
 interface ReaderProps {
   book: Book;
@@ -285,7 +284,6 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
         </div>
       </main>
 
-      <AIAssistant chapterContent={chapter.content} />
     </div>
   );
 };

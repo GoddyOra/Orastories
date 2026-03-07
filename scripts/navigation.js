@@ -53,8 +53,9 @@
       }
       #themeToggle.is-mobile-theme-toggle {
         position: fixed;
-        right: 0.9rem;
-        bottom: 0.9rem;
+        right: 3.8rem;
+        top: calc(env(safe-area-inset-top, 0px) + 0.7rem);
+        bottom: auto;
         z-index: 95;
         border: 1px solid rgba(17, 24, 39, 0.12);
         border-radius: 9999px;
