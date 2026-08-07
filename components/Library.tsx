@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ThemeMode } from '../types';
-import { BOOKS, BookCatalogItem } from '../constants';
+import { BookCatalogItem, fetchBookCatalog } from '../constants';
 
 interface LibraryProps {
   onSelectBook: (book: BookCatalogItem) => void;
@@ -9,6 +9,32 @@ interface LibraryProps {
 
 const Library: React.FC<LibraryProps> = ({ onSelectBook, theme }) => {
   const isLight = theme === 'light';
+  const [books, setBooks] = useState<BookCatalogItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetchBookCatalog()
+      .then((catalog) => {
+        if (cancelled) return;
+        setBooks(catalog);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setLoadError('Unable to load the library right now. Please try again.');
+        console.error('Book catalog load failed:', error);
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <div className={`min-h-screen transition-colors duration-500 py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-12 ${isLight ? 'bg-[#fcfaf7]' : 'bg-[#0f0f0f]'}`}>
@@ -22,8 +48,18 @@ const Library: React.FC<LibraryProps> = ({ onSelectBook, theme }) => {
         <div className={`w-16 h-px mx-auto opacity-40 ${isLight ? 'bg-gray-400' : 'bg-[#d4af37]'}`}></div>
       </header>
 
+      {isLoading && (
+        <p className={`text-center text-sm uppercase tracking-[0.3em] ${isLight ? 'text-gray-400' : 'text-gray-600'}`}>
+          Loading library...
+        </p>
+      )}
+
+      {loadError && (
+        <p className="text-center text-sm text-red-500">{loadError}</p>
+      )}
+
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-12 sm:gap-16 md:gap-20 lg:gap-24 justify-items-center">
-        {BOOKS.map((book) => (
+        {books.map((book) => (
           <div 
             key={book.id}
             className="group relative cursor-pointer w-full max-w-sm"
