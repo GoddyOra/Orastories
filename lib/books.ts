@@ -12,7 +12,7 @@ export interface BookCatalogItem {
   loadBook: () => Promise<Book>;
 }
 
-async function loadBookById(bookId: string): Promise<Book> {
+export async function loadBookById(bookId: string): Promise<Book> {
   const [{ data: bookRow, error: bookError }, { data: chapterRows, error: chapterError }] = await Promise.all([
     supabase.from('books').select('*').eq('id', bookId).single(),
     supabase

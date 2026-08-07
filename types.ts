@@ -23,3 +23,27 @@ export interface ReadingSettings {
   fontSize: number;
   lineHeight: number;
 }
+
+export interface Profile {
+  id: string;
+  role: 'creator' | 'reader';
+  displayName: string | null;
+  createdAt: string;
+}
+
+export interface Bookmark {
+  id: string;
+  readerId: string;
+  bookId: string;
+  chapterId: string | null;
+  createdAt: string;
+}
+
+export interface Review {
+  id: string;
+  bookId: string;
+  readerId: string;
+  rating: number;
+  body: string | null;
+  createdAt: string;
+}

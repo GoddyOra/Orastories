@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Library from './components/Library';
 import Reader from './components/Reader';
+import Portal from './components/Portal';
+import NavAccountControl from './components/NavAccountControl';
 import { Book, ThemeMode } from './types';
 import { BookCatalogItem } from './constants';
 
@@ -8,6 +10,7 @@ const App: React.FC = () => {
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [isLoadingBook, setIsLoadingBook] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [showPortal, setShowPortal] = useState(false);
   const loadRequestId = useRef(0);
   const [theme, setTheme] = useState<ThemeMode>(() => {
     if (typeof window === 'undefined') return 'light';
@@ -45,7 +48,7 @@ const App: React.FC = () => {
 
     if (!navElement) return;
 
-    if (selectedBook) {
+    if (selectedBook || showPortal) {
       navElement.style.display = 'none';
       navElement.setAttribute('aria-hidden', 'true');
       if (wrapperElement) wrapperElement.style.paddingTop = '0px';
@@ -56,12 +59,13 @@ const App: React.FC = () => {
     navElement.removeAttribute('aria-hidden');
     if (wrapperElement) wrapperElement.style.paddingTop = '';
     window.dispatchEvent(new Event('resize'));
-  }, [selectedBook]);
+  }, [selectedBook, showPortal]);
 
   const handleSelectBook = async (book: BookCatalogItem) => {
     const requestId = ++loadRequestId.current;
     setLoadError(null);
     setIsLoadingBook(true);
+    setShowPortal(false);
 
     try {
       const loadedBook = await book.loadBook();
@@ -78,9 +82,28 @@ const App: React.FC = () => {
     }
   };
 
+  const handleOpenPortal = () => {
+    setSelectedBook(null);
+    setShowPortal(true);
+  };
+
   return (
     <div className={`min-h-screen transition-colors duration-500 ${theme === 'light' ? 'bg-[#fcfaf7] text-[#1a1a1a]' : 'bg-[#0f0f0f] text-[#e0e0e0]'}`}>
-      {!selectedBook ? (
+      <NavAccountControl theme={theme} onOpenPortal={handleOpenPortal} />
+
+      {selectedBook ? (
+        <div className="animate-readerFadeIn">
+          <Reader
+            book={selectedBook}
+            onClose={() => setSelectedBook(null)}
+            externalTheme={theme}
+            onThemeChange={setTheme}
+            onRequireSignIn={handleOpenPortal}
+          />
+        </div>
+      ) : showPortal ? (
+        <Portal theme={theme} onSelectBook={handleSelectBook} onClose={() => setShowPortal(false)} />
+      ) : (
         <>
           {loadError && (
             <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[96] rounded border border-red-500/30 bg-red-100/90 text-red-900 px-4 py-2 text-sm">
@@ -96,17 +119,8 @@ const App: React.FC = () => {
           )}
           <Library onSelectBook={handleSelectBook} theme={theme} />
         </>
-      ) : (
-        <div className="animate-readerFadeIn">
-          <Reader 
-            book={selectedBook} 
-            onClose={() => setSelectedBook(null)} 
-            externalTheme={theme}
-            onThemeChange={setTheme}
-          />
-        </div>
       )}
-      
+
       <style>{`
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(10px); }

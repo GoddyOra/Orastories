@@ -1,11 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Book, Chapter, ThemeMode, ReadingSettings } from '../types';
+import { useAuth } from '../contexts/AuthContext';
+import { getBookmark, saveBookmark } from '../lib/bookmarks';
+import { getMyReview, upsertReview } from '../lib/reviews';
 
 interface ReaderProps {
   book: Book;
   onClose: () => void;
   externalTheme: ThemeMode;
   onThemeChange: (theme: ThemeMode) => void;
+  onRequireSignIn: () => void;
 }
 
 const getDeviceWidth = () => (typeof window === 'undefined' ? 1280 : window.innerWidth);
@@ -24,7 +28,8 @@ const getFontRange = (width: number) => {
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
-const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeChange }) => {
+const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeChange, onRequireSignIn }) => {
+  const { user, loading: authLoading } = useAuth();
   const [viewportWidth, setViewportWidth] = useState(getDeviceWidth);
   const [currentChapterIndex, setCurrentChapterIndex] = useState(0);
   const [readingProgress, setReadingProgress] = useState(0);
@@ -37,6 +42,11 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
     };
   });
   const [showSettings, setShowSettings] = useState(false);
+  const [showReview, setShowReview] = useState(false);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewBody, setReviewBody] = useState('');
+  const [reviewSaving, setReviewSaving] = useState(false);
+  const [reviewSaved, setReviewSaved] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const chapter = book.chapters[currentChapterIndex];
@@ -76,6 +86,84 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Resume at the reader's last-read chapter for this book, if any. Gated
+  // behind resumeReady so signed-in readers don't see a flash of chapter 1
+  // before the async bookmark lookup lands.
+  const [resumeReady, setResumeReady] = useState(false);
+
+  useEffect(() => {
+    if (authLoading) return;
+
+    if (!user) {
+      setResumeReady(true);
+      return;
+    }
+
+    let cancelled = false;
+
+    getBookmark(book.id, user.id)
+      .then((bookmark) => {
+        if (cancelled) return;
+        if (bookmark?.chapterId) {
+          const idx = book.chapters.findIndex((c) => c.id === bookmark.chapterId);
+          if (idx !== -1) setCurrentChapterIndex(idx);
+        }
+        setResumeReady(true);
+      })
+      .catch((error) => {
+        console.error('Bookmark lookup failed:', error);
+        if (!cancelled) setResumeReady(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, user, book.id]);
+
+  // Prefill the review modal with the reader's existing review for this book, if any.
+  useEffect(() => {
+    if (!showReview || !user) return;
+    let cancelled = false;
+
+    getMyReview(book.id, user.id)
+      .then((review) => {
+        if (cancelled || !review) return;
+        setReviewRating(review.rating);
+        setReviewBody(review.body ?? '');
+      })
+      .catch((error) => console.error('Review lookup failed:', error));
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showReview, user, book.id]);
+
+  const goToChapter = (index: number) => {
+    setCurrentChapterIndex(index);
+    window.scrollTo(0, 0);
+    if (user) {
+      const nextChapter = book.chapters[index];
+      if (nextChapter) {
+        saveBookmark(book.id, user.id, nextChapter.id).catch((error) =>
+          console.error('Bookmark save failed:', error)
+        );
+      }
+    }
+  };
+
+  const handleSubmitReview = async () => {
+    if (!user || reviewRating === 0) return;
+    setReviewSaving(true);
+    try {
+      await upsertReview(book.id, user.id, reviewRating, reviewBody);
+      setReviewSaved(true);
+    } catch (error) {
+      console.error('Review save failed:', error);
+    } finally {
+      setReviewSaving(false);
+    }
+  };
 
   useEffect(() => {
     const preventCopy = (e: ClipboardEvent) => {
@@ -214,6 +302,26 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
           >
             <SettingsIcon />
           </button>
+          <button
+            onClick={() => {
+              if (!user) {
+                onRequireSignIn();
+                return;
+              }
+              setReviewSaved(false);
+              setShowReview(true);
+            }}
+            className={`p-2.5 rounded-full border backdrop-blur-md transition-colors shadow-sm ${
+              settings.theme === 'dark'
+                ? 'bg-[#141414]/95 border-white/15 text-white hover:text-[#d4af37] hover:border-[#d4af37]/50'
+                : settings.theme === 'sepia'
+                  ? 'bg-[#fcf8ed]/95 border-[#d9c8a3] text-[#5b4636] hover:text-[#8b4513] hover:border-[#8b4513]/40'
+                  : 'bg-white/95 border-black/10 text-[#1a1a1a] hover:text-[#8b4513] hover:border-[#8b4513]/40'
+            }`}
+            title="Rate & Review"
+          >
+            <StarIcon />
+          </button>
         </div>
       </div>
 
@@ -249,7 +357,7 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
                 />
               </div>
 
-              <button 
+              <button
                 onClick={() => setShowSettings(false)}
                 className="w-full py-4 border border-[#d4af37]/40 text-[#d4af37] text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-[#d4af37] hover:text-black transition-all"
               >
@@ -260,8 +368,73 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
         </div>
       )}
 
+      {/* Review Modal */}
+      {showReview && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md" onClick={() => setShowReview(false)}>
+          <div
+            className="bg-[#161616] text-white p-6 sm:p-8 md:p-10 rounded-sm shadow-2xl w-full max-w-sm border border-[#d4af37]/20"
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 className="text-xl sm:text-2xl font-['Playfair_Display'] mb-6 sm:mb-8 text-[#d4af37] italic">Rate & Review</h3>
+
+            {reviewSaved ? (
+              <div className="text-center py-4">
+                <p className="text-sm text-gray-300 mb-6">Thank you for your review.</p>
+                <button
+                  onClick={() => setShowReview(false)}
+                  className="w-full py-4 border border-[#d4af37]/40 text-[#d4af37] text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-[#d4af37] hover:text-black transition-all"
+                >
+                  Close
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-6 sm:space-y-8">
+                <div>
+                  <label className="block text-[10px] uppercase tracking-[0.2em] text-gray-500 mb-4">Your Rating</label>
+                  <div className="flex gap-2 text-2xl">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        onClick={() => setReviewRating(star)}
+                        className={star <= reviewRating ? 'text-[#d4af37]' : 'text-white/20'}
+                        aria-label={`${star} star${star > 1 ? 's' : ''}`}
+                      >
+                        ★
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] uppercase tracking-[0.2em] text-gray-500 mb-4">Review (optional)</label>
+                  <textarea
+                    value={reviewBody}
+                    onChange={(e) => setReviewBody(e.target.value)}
+                    rows={4}
+                    className="w-full px-4 py-3 rounded-sm border border-white/15 bg-[#0f0f0f] text-white text-sm focus:outline-none focus:border-[#d4af37]"
+                  />
+                </div>
+
+                <button
+                  onClick={handleSubmitReview}
+                  disabled={reviewRating === 0 || reviewSaving}
+                  className="w-full py-4 border border-[#d4af37]/40 text-[#d4af37] text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-[#d4af37] hover:text-black transition-all disabled:opacity-40"
+                >
+                  {reviewSaving ? 'Saving...' : 'Submit Review'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Main Content Area - Styled like a professional Folio Page */}
       <main className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 pt-28 sm:pt-36 md:pt-44 lg:pt-48 protected-text">
+        {!resumeReady ? (
+          <div className="flex items-center justify-center py-32 text-sm uppercase tracking-[0.3em] opacity-50">
+            Opening book...
+          </div>
+        ) : (
         <div className={`relative p-6 sm:p-8 md:p-14 lg:p-24 rounded-sm border transition-colors duration-700 ${getPageClasses()}`}>
           <header className="mb-14 sm:mb-16 md:mb-24 text-center">
             <h1 className={`text-3xl sm:text-5xl md:text-7xl lg:text-8xl font-['Playfair_Display'] leading-tight mb-6 sm:mb-8 ${getTitleColor()}`}>
@@ -302,18 +475,18 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
 
           {/* Footer Navigation within the Folio */}
           <div className="mt-20 md:mt-32 lg:mt-48 border-t border-current/5 pt-10 md:pt-16 lg:pt-20 flex justify-between items-center gap-6">
-            <button 
+            <button
               disabled={currentChapterIndex === 0}
-              onClick={() => { setCurrentChapterIndex(prev => prev - 1); window.scrollTo(0, 0); }}
+              onClick={() => goToChapter(currentChapterIndex - 1)}
               className={`flex flex-col items-start gap-2 transition-all ${currentChapterIndex === 0 ? 'opacity-5 pointer-events-none' : 'hover:translate-x-[-8px]'}`}
             >
               <span className="text-[10px] uppercase tracking-[0.4em] opacity-40">Previous</span>
               <span className="text-lg sm:text-xl md:text-2xl font-['Playfair_Display'] italic">Turn Back</span>
             </button>
-            
-            <button 
+
+            <button
               disabled={currentChapterIndex === book.chapters.length - 1}
-              onClick={() => { setCurrentChapterIndex(prev => prev + 1); window.scrollTo(0, 0); }}
+              onClick={() => goToChapter(currentChapterIndex + 1)}
               className={`flex flex-col items-end gap-2 text-right transition-all ${currentChapterIndex === book.chapters.length - 1 ? 'opacity-5 pointer-events-none' : 'hover:translate-x-[8px]'}`}
             >
               <span className="text-[10px] uppercase tracking-[0.4em] opacity-40">Next</span>
@@ -321,6 +494,7 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
             </button>
           </div>
         </div>
+        )}
       </main>
 
     </div>
@@ -343,6 +517,12 @@ const SunIcon = () => (
 const MoonIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+  </svg>
+);
+
+const StarIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-60 hover:opacity-100 transition-opacity">
+    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
   </svg>
 );
 
