@@ -34,6 +34,18 @@ const App: React.FC = () => {
     }
   }, []);
 
+  // The static marketing pages (about.html, books.html, etc.) have no
+  // sign-in form of their own - their nav's "Sign In" / "My Account" links
+  // send readers here with this param so they land directly in Portal
+  // instead of just the plain library view.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('openPortal') !== '1') return;
+    setShowPortal(true);
+    const url = new URL(window.location.href);
+    url.searchParams.delete('openPortal');
+    window.history.replaceState({}, '', url.toString());
+  }, []);
+
   // Stripe Checkout redirects back here as a full page navigation (React
   // state doesn't survive the trip to checkout.stripe.com and back), so this
   // is just a one-time acknowledgment on the library view, not a return to

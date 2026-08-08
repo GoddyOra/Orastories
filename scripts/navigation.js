@@ -251,3 +251,142 @@
     { passive: true }
   );
 })();
+
+// Site-wide auth widget: shows the signed-in reader's username in the nav on
+// every static page. index.html runs the full React app, which already owns
+// #siteNavControls via NavAccountControl - this widget skips itself there
+// entirely and only handles the plain marketing/blog pages. Sign-in itself
+// still only ever happens inside the React app; this only *reads* the
+// session Supabase already persisted to localStorage on sign-in there (the
+// storage key is project-scoped, not script-scoped, so a second, independent
+// Supabase client instance here sees the exact same session for free).
+(async () => {
+  if (document.getElementById('root')) return;
+
+  const controls = document.getElementById('siteNavControls');
+  if (!controls) return;
+
+  const SUPABASE_URL = 'https://spordcubtugawsyelqxz.supabase.co';
+  const SUPABASE_ANON_KEY =
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNwb3JkY3VidHVnYXdzeWVscXh6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxMTQ0MTMsImV4cCI6MjEwMTY5MDQxM30.jQhzR_pTDIFpaJDfBmxn0-9gFovxNRZEt4nfy20uNbg';
+
+  let supabase;
+  try {
+    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+    supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  } catch (error) {
+    console.error('Orastories nav auth: failed to load Supabase client', error);
+    return;
+  }
+
+  const isLight = () => !document.body.classList.contains('dark-mode');
+
+  const wrapper = document.createElement('div');
+  wrapper.id = 'siteNavAuth';
+  wrapper.className = 'relative';
+  controls.appendChild(wrapper);
+
+  let themeUpdaters = [];
+  // orastories-theme-change is only dispatched by index.html's inline theme
+  // script (to sync into the React app) - other static pages just toggle
+  // body's dark-mode class directly with no event at all. Observing the
+  // class attribute itself works uniformly across every page regardless of
+  // how each one's own toggle script is implemented.
+  new MutationObserver(() => themeUpdaters.forEach((fn) => fn())).observe(document.body, {
+    attributes: true,
+    attributeFilter: ['class']
+  });
+
+  function renderSignedOut() {
+    wrapper.innerHTML = '';
+    themeUpdaters = [];
+
+    const link = document.createElement('a');
+    link.href = 'index.html?openPortal=1';
+    link.textContent = 'Sign In';
+
+    const update = () => {
+      link.className = `text-sm sm:text-base font-medium transition-colors ${
+        isLight() ? 'text-gray-900 hover:text-amber-700' : 'text-gray-100 hover:text-amber-400'
+      }`;
+    };
+    update();
+    themeUpdaters.push(update);
+    wrapper.appendChild(link);
+  }
+
+  function renderSignedIn(label) {
+    wrapper.innerHTML = '';
+    themeUpdaters = [];
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = label;
+    button.setAttribute('aria-haspopup', 'true');
+
+    const menu = document.createElement('div');
+    menu.classList.add('hidden', 'absolute', 'right-0', 'mt-2', 'w-40', 'rounded-sm', 'border', 'shadow-lg', 'py-1', 'z-50', 'overflow-hidden');
+
+    const accountLink = document.createElement('a');
+    accountLink.href = 'index.html?openPortal=1';
+    accountLink.textContent = 'My Account';
+
+    const signOutBtn = document.createElement('button');
+    signOutBtn.type = 'button';
+    signOutBtn.textContent = 'Sign Out';
+
+    const update = () => {
+      const light = isLight();
+      button.className = `text-sm sm:text-base font-medium transition-colors ${
+        light ? 'text-gray-900 hover:text-amber-700' : 'text-gray-100 hover:text-amber-400'
+      }`;
+
+      menu.classList.remove('bg-white', 'border-black/10', 'bg-[#161616]', 'border-white/10');
+      (light ? 'bg-white border-black/10' : 'bg-[#161616] border-white/10').split(' ').forEach((c) => menu.classList.add(c));
+
+      const itemClass = `block w-full text-left px-4 py-2 text-sm transition-colors ${
+        light ? 'text-gray-900 hover:bg-black/5' : 'text-white hover:bg-white/10'
+      }`;
+      accountLink.className = itemClass;
+      signOutBtn.className = itemClass;
+    };
+    update();
+    themeUpdaters.push(update);
+
+    button.addEventListener('click', (event) => {
+      event.stopPropagation();
+      menu.classList.toggle('hidden');
+    });
+
+    signOutBtn.addEventListener('click', async () => {
+      menu.classList.add('hidden');
+      await supabase.auth.signOut({ scope: 'local' });
+      renderSignedOut();
+    });
+
+    menu.appendChild(accountLink);
+    menu.appendChild(signOutBtn);
+    wrapper.appendChild(button);
+    wrapper.appendChild(menu);
+  }
+
+  document.addEventListener('click', (event) => {
+    if (wrapper.contains(event.target)) return;
+    const menu = wrapper.querySelector('div');
+    if (menu) menu.classList.add('hidden');
+  });
+
+  const {
+    data: { session }
+  } = await supabase.auth.getSession();
+
+  if (!session) {
+    renderSignedOut();
+    return;
+  }
+
+  const { data: profile } = await supabase.from('profiles').select('username').eq('id', session.user.id).maybeSingle();
+
+  const label = (profile && profile.username) || (session.user.email ? session.user.email.split('@')[0] : 'Account');
+  renderSignedIn(label);
+})();
