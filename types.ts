@@ -28,6 +28,17 @@ export interface Profile {
   id: string;
   role: 'creator' | 'reader';
   displayName: string | null;
+  username: string | null;
+  createdAt: string;
+}
+
+export type CreatorApplicationStatus = 'pending' | 'approved' | 'rejected';
+
+export interface CreatorApplication {
+  id: string;
+  userId: string;
+  message: string | null;
+  status: CreatorApplicationStatus;
   createdAt: string;
 }
 

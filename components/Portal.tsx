@@ -3,7 +3,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { BookCatalogItem, loadBookById } from '../constants';
 import { BookmarkedBook, listBookmarksWithBooks } from '../lib/bookmarks';
 import { listMyReviews, MyReviewWithBook } from '../lib/reviews';
-import { ThemeMode } from '../types';
+import { isUsernameAvailable, claimUsername, USERNAME_PATTERN } from '../lib/username';
+import { getMyApplication, submitCreatorApplication } from '../lib/creatorApplications';
+import { CreatorApplication, ThemeMode } from '../types';
 
 // Lazy-loaded: pulls in mammoth (DOCX parsing) which meaningfully bloats
 // the bundle. Code-split so only creators who open "My Books" download it.
@@ -17,31 +19,42 @@ interface PortalProps {
 
 const Portal: React.FC<PortalProps> = ({ theme, onSelectBook, onClose }) => {
   const isLight = theme !== 'dark';
-  const { user, profile, loading, signIn, signUp, signOut } = useAuth();
+  const { user, profile, loading, signIn, signUp, signOut, refreshProfile } = useAuth();
 
   const [activeTab, setActiveTab] = useState<'reading' | 'studio'>('reading');
 
   const [mode, setMode] = useState<'signIn' | 'signUp'>('signIn');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [signupUsername, setSignupUsername] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const [formLoading, setFormLoading] = useState(false);
   const [checkEmail, setCheckEmail] = useState(false);
 
+  const [gateUsername, setGateUsername] = useState('');
+  const [gateError, setGateError] = useState<string | null>(null);
+  const [gateLoading, setGateLoading] = useState(false);
+
   const [bookmarks, setBookmarks] = useState<BookmarkedBook[]>([]);
   const [reviews, setReviews] = useState<MyReviewWithBook[]>([]);
+  const [application, setApplication] = useState<CreatorApplication | null>(null);
   const [dashboardLoading, setDashboardLoading] = useState(false);
+
+  const [applyMessage, setApplyMessage] = useState('');
+  const [applyLoading, setApplyLoading] = useState(false);
+  const [applyError, setApplyError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
     setDashboardLoading(true);
 
-    Promise.all([listBookmarksWithBooks(user.id), listMyReviews(user.id)])
-      .then(([bookmarkRows, reviewRows]) => {
+    Promise.all([listBookmarksWithBooks(user.id), listMyReviews(user.id), getMyApplication(user.id)])
+      .then(([bookmarkRows, reviewRows, applicationRow]) => {
         if (cancelled) return;
         setBookmarks(bookmarkRows);
         setReviews(reviewRows);
+        setApplication(applicationRow);
       })
       .catch((error) => console.error('Portal dashboard load failed:', error))
       .finally(() => {
@@ -60,7 +73,15 @@ const Portal: React.FC<PortalProps> = ({ theme, onSelectBook, onClose }) => {
 
     try {
       if (mode === 'signUp') {
-        const { data, error } = await signUp(email, password);
+        if (!USERNAME_PATTERN.test(signupUsername)) {
+          setFormError('Username must be 3-20 characters: lowercase letters, numbers, and underscores only.');
+          return;
+        }
+        if (!(await isUsernameAvailable(signupUsername))) {
+          setFormError('That username is already taken.');
+          return;
+        }
+        const { data, error } = await signUp(email, password, signupUsername);
         if (error) throw error;
         if (!data.session) {
           setCheckEmail(true);
@@ -73,6 +94,45 @@ const Portal: React.FC<PortalProps> = ({ theme, onSelectBook, onClose }) => {
       setFormError(error instanceof Error ? error.message : 'Something went wrong. Please try again.');
     } finally {
       setFormLoading(false);
+    }
+  };
+
+  const handleClaimUsername = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setGateError(null);
+
+    const candidate = gateUsername.toLowerCase();
+    if (!USERNAME_PATTERN.test(candidate)) {
+      setGateError('Username must be 3-20 characters: lowercase letters, numbers, and underscores only.');
+      return;
+    }
+
+    setGateLoading(true);
+    try {
+      if (!(await isUsernameAvailable(candidate))) {
+        setGateError('That username is already taken.');
+        return;
+      }
+      await claimUsername(user!.id, candidate);
+      await refreshProfile();
+    } catch (error) {
+      setGateError(error instanceof Error ? error.message : 'Something went wrong. Please try again.');
+    } finally {
+      setGateLoading(false);
+    }
+  };
+
+  const handleSubmitApplication = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setApplyError(null);
+    setApplyLoading(true);
+    try {
+      await submitCreatorApplication(user!.id, applyMessage);
+      setApplication(await getMyApplication(user!.id));
+    } catch (error) {
+      setApplyError(error instanceof Error ? error.message : 'Something went wrong. Please try again.');
+    } finally {
+      setApplyLoading(false);
     }
   };
 
@@ -121,6 +181,21 @@ const Portal: React.FC<PortalProps> = ({ theme, onSelectBook, onClose }) => {
               </p>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
+                {mode === 'signUp' && (
+                  <div>
+                    <label className={`block text-[10px] uppercase tracking-[0.2em] mb-2 ${textMuted}`}>Username</label>
+                    <input
+                      type="text"
+                      required
+                      value={signupUsername}
+                      onChange={(e) => setSignupUsername(e.target.value.toLowerCase())}
+                      placeholder="lowercase letters, numbers, underscores"
+                      className={`w-full px-4 py-3 rounded-sm border text-sm focus:outline-none focus:border-amber-700 ${
+                        isLight ? 'bg-white border-black/15 text-gray-900' : 'bg-[#0f0f0f] border-white/15 text-white'
+                      }`}
+                    />
+                  </div>
+                )}
                 <div>
                   <label className={`block text-[10px] uppercase tracking-[0.2em] mb-2 ${textMuted}`}>Email</label>
                   <input
@@ -170,10 +245,39 @@ const Portal: React.FC<PortalProps> = ({ theme, onSelectBook, onClose }) => {
               </form>
             )}
           </div>
+        ) : profile && !profile.username ? (
+          <div className={`max-w-md mx-auto rounded-sm border p-8 sm:p-10 ${cardBg}`}>
+            <h1 className={`text-3xl sm:text-4xl font-['Playfair_Display'] mb-2 ${isLight ? 'text-gray-900' : 'text-white'}`}>
+              Choose a Username
+            </h1>
+            <p className={`text-sm mb-8 ${textMuted}`}>
+              This is how other readers will see you instead of your email.
+            </p>
+            <form onSubmit={handleClaimUsername} className="space-y-4">
+              <input
+                type="text"
+                required
+                value={gateUsername}
+                onChange={(e) => setGateUsername(e.target.value.toLowerCase())}
+                placeholder="lowercase letters, numbers, underscores"
+                className={`w-full px-4 py-3 rounded-sm border text-sm focus:outline-none focus:border-amber-700 ${
+                  isLight ? 'bg-white border-black/15 text-gray-900' : 'bg-[#0f0f0f] border-white/15 text-white'
+                }`}
+              />
+              {gateError && <p className="text-sm text-red-500">{gateError}</p>}
+              <button
+                type="submit"
+                disabled={gateLoading}
+                className="w-full py-3.5 border border-amber-700 text-amber-700 text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-amber-700 hover:text-white transition-all disabled:opacity-50"
+              >
+                {gateLoading ? 'Please wait...' : 'Save Username'}
+              </button>
+            </form>
+          </div>
         ) : (
           <div>
             <h1 className={`text-3xl sm:text-4xl font-['Playfair_Display'] mb-1 ${isLight ? 'text-gray-900' : 'text-white'}`}>
-              {profile?.displayName || user.email}
+              {profile?.username || user.email}
             </h1>
             <button
               onClick={() => signOut().catch((error) => console.error('Sign out failed:', error))}
@@ -251,6 +355,40 @@ const Portal: React.FC<PortalProps> = ({ theme, onSelectBook, onClose }) => {
                     </div>
                   )}
                 </section>
+
+                {profile?.role !== 'creator' && (
+                  <section className="mt-14">
+                    <h2 className={`text-xs uppercase tracking-[0.3em] mb-5 ${textMuted}`}>Become a Creator</h2>
+                    {application?.status === 'pending' ? (
+                      <p className={`text-sm ${textMuted}`}>Your application is under review.</p>
+                    ) : application?.status === 'rejected' ? (
+                      <p className={`text-sm ${textMuted}`}>Your application was not approved.</p>
+                    ) : (
+                      <form onSubmit={handleSubmitApplication} className="space-y-4">
+                        <p className={`text-sm ${textMuted}`}>
+                          Interested in publishing your own stories on Orastories? Tell us a bit about what you'd like to write.
+                        </p>
+                        <textarea
+                          rows={4}
+                          value={applyMessage}
+                          onChange={(e) => setApplyMessage(e.target.value)}
+                          placeholder="A short pitch or a bit about yourself"
+                          className={`w-full px-4 py-3 rounded-sm border text-sm focus:outline-none focus:border-amber-700 ${
+                            isLight ? 'bg-white border-black/15 text-gray-900' : 'bg-[#0f0f0f] border-white/15 text-white'
+                          }`}
+                        />
+                        {applyError && <p className="text-sm text-red-500">{applyError}</p>}
+                        <button
+                          type="submit"
+                          disabled={applyLoading}
+                          className="px-6 py-3 border border-amber-700 text-amber-700 text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-amber-700 hover:text-white transition-all disabled:opacity-50"
+                        >
+                          {applyLoading ? 'Submitting...' : 'Apply to Become a Creator'}
+                        </button>
+                      </form>
+                    )}
+                  </section>
+                )}
               </>
             )}
           </div>

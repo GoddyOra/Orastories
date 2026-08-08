@@ -1,11 +1,12 @@
 import { supabase } from './supabaseClient';
 import { Profile } from '../types';
+import { USERNAME_PATTERN } from './username';
 
-export async function signUp(email: string, password: string) {
+export async function signUp(email: string, password: string, username: string) {
   return supabase.auth.signUp({
     email,
     password,
-    options: { emailRedirectTo: window.location.origin }
+    options: { data: { username }, emailRedirectTo: window.location.origin }
   });
 }
 
@@ -23,16 +24,33 @@ export async function signOut() {
 }
 
 // Insert-if-absent only: never overwrites an existing profile's role/display_name.
-export async function ensureProfile(userId: string) {
-  return supabase
+// rawUsername comes from auth user_metadata, which is arbitrary client-supplied
+// JSON - re-validate the format here rather than trusting it, since a malformed
+// value would otherwise trip the DB's CHECK constraint (a different error code
+// than the unique-collision retry below expects) and leave the account with no
+// profile row at all.
+export async function ensureProfile(userId: string, rawUsername: unknown) {
+  const username = typeof rawUsername === 'string' && USERNAME_PATTERN.test(rawUsername) ? rawUsername : null;
+
+  const { error } = await supabase
     .from('profiles')
-    .upsert({ id: userId, role: 'reader' }, { onConflict: 'id', ignoreDuplicates: true });
+    .upsert({ id: userId, role: 'reader', username }, { onConflict: 'id', ignoreDuplicates: true });
+
+  if (error && error.code === '23505' && username) {
+    // The desired username was taken by the time this account's email got
+    // confirmed (confirmation can lag signup by minutes). Fall back to no
+    // username rather than leaving the account with no profile row at all -
+    // Portal's "choose a username" gate recovers from here.
+    await supabase
+      .from('profiles')
+      .upsert({ id: userId, role: 'reader', username: null }, { onConflict: 'id', ignoreDuplicates: true });
+  }
 }
 
 export async function fetchProfile(userId: string): Promise<Profile | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id,role,display_name,created_at')
+    .select('id,role,display_name,username,created_at')
     .eq('id', userId)
     .maybeSingle();
 
@@ -43,6 +61,7 @@ export async function fetchProfile(userId: string): Promise<Profile | null> {
     id: data.id,
     role: data.role,
     displayName: data.display_name,
+    username: data.username,
     createdAt: data.created_at
   };
 }

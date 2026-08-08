@@ -23,7 +23,7 @@ const NavAccountControl: React.FC<NavAccountControlProps> = ({ theme, onOpenPort
   if (!target || loading) return null;
 
   const isLight = theme !== 'dark';
-  const label = user ? (profile?.displayName || user.email?.split('@')[0] || 'Account') : 'Sign In';
+  const label = user ? (profile?.username || user.email?.split('@')[0] || 'Account') : 'Sign In';
 
   return createPortal(
     <button

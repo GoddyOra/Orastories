@@ -15,6 +15,7 @@ create table if not exists profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   role text not null default 'reader' check (role in ('creator', 'reader')),
   display_name text,
+  username text unique check (username ~ '^[a-z0-9_]{3,20}$'),
   created_at timestamptz not null default now()
 );
 
@@ -82,6 +83,17 @@ create table if not exists payouts (
   created_at timestamptz not null default now()
 );
 
+-- A reader's request to become a creator. Status changes (approved/rejected)
+-- are made only by the site owner via the Supabase dashboard (service role,
+-- bypasses RLS) — there is deliberately no self-serve path to role='creator'.
+create table if not exists creator_applications (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null unique references profiles(id) on delete cascade,
+  message text,
+  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  created_at timestamptz not null default now()
+);
+
 -- Row Level Security
 
 alter table profiles enable row level security;
@@ -91,13 +103,29 @@ alter table reads enable row level security;
 alter table reviews enable row level security;
 alter table bookmarks enable row level security;
 alter table payouts enable row level security;
+alter table creator_applications enable row level security;
 
 create policy "profiles are publicly readable" on profiles
   for select using (true);
 create policy "users manage their own profile" on profiles
   for update using (auth.uid() = id);
+-- Force role='reader' on self-insert: nobody's own first row can claim
+-- creator. Combined with the column-level grant below, role can only ever
+-- be changed by the site owner (dashboard/service role, bypasses RLS/grants).
 create policy "users insert their own profile" on profiles
-  for insert with check (auth.uid() = id);
+  for insert with check (auth.uid() = id and role = 'reader');
+-- RLS's WITH CHECK can't cleanly compare against the pre-update row, so the
+-- "can edit username/display_name but never role" rule is enforced via a
+-- plain Postgres column-level grant instead of a policy.
+revoke update on profiles from authenticated;
+grant update (username, display_name) on profiles to authenticated;
+
+create policy "users view their own application" on creator_applications
+  for select using (auth.uid() = user_id);
+create policy "users submit their own application" on creator_applications
+  for insert with check (auth.uid() = user_id and status = 'pending');
+-- No update policy for creator_applications: status changes are
+-- dashboard/service-role only (default-deny for the authenticated role).
 
 create policy "published books are publicly readable" on books
   for select using (is_published = true);
