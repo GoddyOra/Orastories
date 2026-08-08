@@ -3,6 +3,7 @@ import { Book, Chapter, ThemeMode, ReadingSettings } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { getBookmark, saveBookmark } from '../lib/bookmarks';
 import { getMyReview, upsertReview } from '../lib/reviews';
+import { logRead } from '../lib/reads';
 
 interface ReaderProps {
   book: Book;
@@ -138,6 +139,16 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
       cancelled = true;
     };
   }, [showReview, user, book.id]);
+
+  // Log a read for whichever chapter is actually being shown, once resume
+  // correction has landed - fires on both the initial view and every
+  // subsequent chapter change (currentChapterIndex is in the deps).
+  useEffect(() => {
+    if (!resumeReady || !user) return;
+    const currentChapter = book.chapters[currentChapterIndex];
+    if (!currentChapter) return;
+    logRead(currentChapter.id, user.id).catch((error) => console.error('Read log failed:', error));
+  }, [resumeReady, user, book.id, currentChapterIndex]);
 
   const goToChapter = (index: number) => {
     setCurrentChapterIndex(index);

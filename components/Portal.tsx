@@ -5,6 +5,10 @@ import { BookmarkedBook, listBookmarksWithBooks } from '../lib/bookmarks';
 import { listMyReviews, MyReviewWithBook } from '../lib/reviews';
 import { ThemeMode } from '../types';
 
+// Lazy-loaded: pulls in mammoth (DOCX parsing) which meaningfully bloats
+// the bundle. Code-split so only creators who open "My Books" download it.
+const CreatorStudio = React.lazy(() => import('./CreatorStudio'));
+
 interface PortalProps {
   theme: ThemeMode;
   onSelectBook: (book: BookCatalogItem) => void;
@@ -14,6 +18,8 @@ interface PortalProps {
 const Portal: React.FC<PortalProps> = ({ theme, onSelectBook, onClose }) => {
   const isLight = theme !== 'dark';
   const { user, profile, loading, signIn, signUp, signOut } = useAuth();
+
+  const [activeTab, setActiveTab] = useState<'reading' | 'studio'>('reading');
 
   const [mode, setMode] = useState<'signIn' | 'signUp'>('signIn');
   const [email, setEmail] = useState('');
@@ -171,12 +177,37 @@ const Portal: React.FC<PortalProps> = ({ theme, onSelectBook, onClose }) => {
             </h1>
             <button
               onClick={() => signOut().catch((error) => console.error('Sign out failed:', error))}
-              className={`text-xs uppercase tracking-[0.2em] ${textMuted} hover:text-amber-700 mb-12`}
+              className={`text-xs uppercase tracking-[0.2em] ${textMuted} hover:text-amber-700 mb-8`}
             >
               Sign Out
             </button>
 
-            {dashboardLoading ? (
+            {profile?.role === 'creator' && (
+              <div className="flex gap-6 mb-10 border-b border-current/10">
+                <button
+                  onClick={() => setActiveTab('reading')}
+                  className={`pb-3 text-xs uppercase tracking-[0.2em] font-semibold border-b-2 transition-colors ${
+                    activeTab === 'reading' ? 'border-amber-700 text-amber-700' : `border-transparent ${textMuted} hover:text-amber-700`
+                  }`}
+                >
+                  My Reading
+                </button>
+                <button
+                  onClick={() => setActiveTab('studio')}
+                  className={`pb-3 text-xs uppercase tracking-[0.2em] font-semibold border-b-2 transition-colors ${
+                    activeTab === 'studio' ? 'border-amber-700 text-amber-700' : `border-transparent ${textMuted} hover:text-amber-700`
+                  }`}
+                >
+                  My Books
+                </button>
+              </div>
+            )}
+
+            {activeTab === 'studio' && profile?.role === 'creator' ? (
+              <React.Suspense fallback={<p className={`text-sm ${textMuted}`}>Loading Creator Studio...</p>}>
+                <CreatorStudio theme={theme} creatorId={user.id} />
+              </React.Suspense>
+            ) : dashboardLoading ? (
               <p className={`text-sm ${textMuted}`}>Loading your library...</p>
             ) : (
               <>
