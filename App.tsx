@@ -11,6 +11,7 @@ const App: React.FC = () => {
   const [isLoadingBook, setIsLoadingBook] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [showPortal, setShowPortal] = useState(false);
+  const [tipNotice, setTipNotice] = useState<string | null>(null);
   const loadRequestId = useRef(0);
   const [theme, setTheme] = useState<ThemeMode>(() => {
     if (typeof window === 'undefined') return 'light';
@@ -20,6 +21,38 @@ const App: React.FC = () => {
   // Smooth scroll behavior
   useEffect(() => {
     document.documentElement.style.scrollBehavior = 'smooth';
+  }, []);
+
+  // Stripe Connect onboarding also redirects back here as a full page
+  // navigation (see the tip-notice effect below for why). The sync check
+  // that reads the actual verification status lives inside Creator Studio,
+  // so returning here has to reopen Portal on the right tab, not just land
+  // back on the library with the query param sitting unused in the URL.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('stripe_return') === '1') {
+      setShowPortal(true);
+    }
+  }, []);
+
+  // Stripe Checkout redirects back here as a full page navigation (React
+  // state doesn't survive the trip to checkout.stripe.com and back), so this
+  // is just a one-time acknowledgment on the library view, not a return to
+  // the specific book the reader was tipping from.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tip = params.get('tip');
+    if (tip === 'success') {
+      setTipNotice('Thank you for your tip!');
+    } else if (tip === 'cancelled') {
+      setTipNotice('Tip cancelled.');
+    } else {
+      return;
+    }
+    const url = new URL(window.location.href);
+    url.searchParams.delete('tip');
+    window.history.replaceState({}, '', url.toString());
+    const timeout = setTimeout(() => setTipNotice(null), 5000);
+    return () => clearTimeout(timeout);
   }, []);
 
   useEffect(() => {
@@ -90,6 +123,12 @@ const App: React.FC = () => {
   return (
     <div className={`min-h-screen transition-colors duration-500 ${theme === 'light' ? 'bg-[#fcfaf7] text-[#1a1a1a]' : 'bg-[#0f0f0f] text-[#e0e0e0]'}`}>
       <NavAccountControl theme={theme} onOpenPortal={handleOpenPortal} />
+
+      {tipNotice && (
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[96] rounded border border-amber-700/30 bg-amber-50/95 text-amber-900 px-4 py-2 text-sm shadow-sm">
+          {tipNotice}
+        </div>
+      )}
 
       {selectedBook ? (
         <div className="animate-readerFadeIn">

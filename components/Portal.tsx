@@ -21,7 +21,9 @@ const Portal: React.FC<PortalProps> = ({ theme, onSelectBook, onClose }) => {
   const isLight = theme !== 'dark';
   const { user, profile, loading, signIn, signUp, signOut, refreshProfile } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<'reading' | 'studio'>('reading');
+  const [activeTab, setActiveTab] = useState<'reading' | 'studio'>(() =>
+    new URLSearchParams(window.location.search).get('stripe_return') === '1' ? 'studio' : 'reading'
+  );
 
   const [mode, setMode] = useState<'signIn' | 'signUp'>('signIn');
   const [email, setEmail] = useState('');

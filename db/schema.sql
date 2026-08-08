@@ -16,6 +16,8 @@ create table if not exists profiles (
   role text not null default 'reader' check (role in ('creator', 'reader')),
   display_name text,
   username text unique check (username ~ '^[a-z0-9_]{3,20}$'),
+  stripe_account_id text,               -- server-only, never selectable by clients (see grant below)
+  stripe_payouts_enabled boolean not null default false,
   created_at timestamptz not null default now()
 );
 
@@ -94,6 +96,24 @@ create table if not exists creator_applications (
   created_at timestamptz not null default now()
 );
 
+-- A reader's one-time tip to a book's creator, split via Stripe Connect
+-- destination charges. Rows are only ever written by the Stripe Edge
+-- Functions (service role) — create-tip-checkout inserts the pending row,
+-- stripe-webhook is the only thing that ever marks it succeeded, since a
+-- client-side "payment succeeded" redirect is trivially fakeable.
+create table if not exists tips (
+  id uuid primary key default gen_random_uuid(),
+  book_id text not null references books(id) on delete cascade,
+  creator_id uuid not null references profiles(id) on delete cascade,
+  reader_id uuid not null references profiles(id) on delete cascade,
+  amount_cents int not null,
+  platform_fee_cents int not null,
+  stripe_checkout_session_id text unique,
+  stripe_payment_intent_id text,
+  status text not null default 'pending' check (status in ('pending', 'succeeded', 'failed')),
+  created_at timestamptz not null default now()
+);
+
 -- Row Level Security
 
 alter table profiles enable row level security;
@@ -104,6 +124,7 @@ alter table reviews enable row level security;
 alter table bookmarks enable row level security;
 alter table payouts enable row level security;
 alter table creator_applications enable row level security;
+alter table tips enable row level security;
 
 create policy "profiles are publicly readable" on profiles
   for select using (true);
@@ -119,6 +140,12 @@ create policy "users insert their own profile" on profiles
 -- plain Postgres column-level grant instead of a policy.
 revoke update on profiles from authenticated;
 grant update (username, display_name) on profiles to authenticated;
+-- Row-level "publicly readable" applies per-row, not per-column: without this
+-- grant, stripe_account_id (added for tipping) would be selectable by every
+-- visitor via the policy above. stripe_payouts_enabled stays public since the
+-- reader-facing UI needs it to decide whether to show a book's tip button.
+revoke select on profiles from authenticated, anon;
+grant select (id, role, display_name, username, created_at, stripe_payouts_enabled) on profiles to authenticated, anon;
 
 create policy "users view their own application" on creator_applications
   for select using (auth.uid() = user_id);
@@ -163,3 +190,10 @@ create policy "readers manage their own bookmarks" on bookmarks
 
 create policy "creators see their own payouts" on payouts
   for select using (auth.uid() = creator_id);
+
+create policy "creators view tips they received" on tips
+  for select using (auth.uid() = creator_id);
+create policy "readers view tips they sent" on tips
+  for select using (auth.uid() = reader_id);
+-- No insert/update policy: rows are only ever written by the Stripe Edge
+-- Functions via the service-role key (see comment on the table above).

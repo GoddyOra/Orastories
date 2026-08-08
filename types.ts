@@ -29,6 +29,7 @@ export interface Profile {
   role: 'creator' | 'reader';
   displayName: string | null;
   username: string | null;
+  stripePayoutsEnabled: boolean;
   createdAt: string;
 }
 
@@ -56,5 +57,18 @@ export interface Review {
   readerId: string;
   rating: number;
   body: string | null;
+  createdAt: string;
+}
+
+export type TipStatus = 'pending' | 'succeeded' | 'failed';
+
+export interface Tip {
+  id: string;
+  bookId: string;
+  creatorId: string;
+  readerId: string;
+  amountCents: number;
+  platformFeeCents: number;
+  status: TipStatus;
   createdAt: string;
 }

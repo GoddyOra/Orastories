@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { ThemeMode } from '../types';
 import { CreatorBook, createBook, listMyBooks } from '../lib/creatorBooks';
+import { startStripeOnboarding, syncStripeOnboardingStatus } from '../lib/creatorPayments';
+import { useAuth } from '../contexts/AuthContext';
 import BookEditor from './BookEditor';
 
 interface CreatorStudioProps {
@@ -18,12 +20,18 @@ const CreatorStudio: React.FC<CreatorStudioProps> = ({ theme, creatorId }) => {
     isLight ? 'bg-white border-black/15 text-gray-900' : 'bg-[#0f0f0f] border-white/15 text-white'
   }`;
 
+  const { profile, refreshProfile } = useAuth();
+
   const [books, setBooks] = useState<CreatorBook[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedBookId, setSelectedBookId] = useState<string | 'new' | null>(null);
   const [newFields, setNewFields] = useState(emptyFields);
   const [createError, setCreateError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+
+  const [connecting, setConnecting] = useState(false);
+  const [connectError, setConnectError] = useState<string | null>(null);
+  const [syncingStripe, setSyncingStripe] = useState(false);
 
   const loadBooks = () => {
     setLoading(true);
@@ -36,6 +44,32 @@ const CreatorStudio: React.FC<CreatorStudioProps> = ({ theme, creatorId }) => {
   useEffect(() => {
     loadBooks();
   }, [creatorId]);
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('stripe_return') !== '1') return;
+
+    setSyncingStripe(true);
+    syncStripeOnboardingStatus()
+      .then(() => refreshProfile())
+      .catch((error) => console.error('Stripe status sync failed:', error))
+      .finally(() => setSyncingStripe(false));
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete('stripe_return');
+    window.history.replaceState({}, '', url.toString());
+  }, []);
+
+  const handleConnectStripe = async () => {
+    setConnecting(true);
+    setConnectError(null);
+    try {
+      const url = await startStripeOnboarding();
+      window.location.href = url;
+    } catch (error) {
+      setConnectError(error instanceof Error ? error.message : 'Something went wrong.');
+      setConnecting(false);
+    }
+  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,6 +155,27 @@ const CreatorStudio: React.FC<CreatorStudioProps> = ({ theme, creatorId }) => {
 
   return (
     <div>
+      <div className={`rounded-sm border p-6 mb-8 ${cardCls}`}>
+        <h3 className={`text-xs uppercase tracking-[0.3em] mb-3 ${textMuted}`}>Payments</h3>
+        {syncingStripe ? (
+          <p className={`text-sm ${textMuted}`}>Checking your Stripe status...</p>
+        ) : profile?.stripePayoutsEnabled ? (
+          <p className="text-sm text-amber-700 font-semibold">Stripe connected — you can receive tips from readers.</p>
+        ) : (
+          <>
+            <p className={`text-sm mb-4 ${textMuted}`}>Connect a Stripe account to receive tips from readers.</p>
+            {connectError && <p className="text-sm text-red-500 mb-3">{connectError}</p>}
+            <button
+              onClick={handleConnectStripe}
+              disabled={connecting}
+              className="px-6 py-3 border border-amber-700 text-amber-700 text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-amber-700 hover:text-white transition-all disabled:opacity-50"
+            >
+              {connecting ? 'Redirecting...' : 'Connect Stripe'}
+            </button>
+          </>
+        )}
+      </div>
+
       <div className="flex items-center justify-between mb-6">
         <h2 className={`text-2xl font-['Playfair_Display'] ${isLight ? 'text-gray-900' : 'text-white'}`}>My Books</h2>
         <button

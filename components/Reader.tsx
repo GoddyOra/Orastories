@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { getBookmark, saveBookmark } from '../lib/bookmarks';
 import { getMyReview, upsertReview } from '../lib/reviews';
 import { logRead } from '../lib/reads';
+import { createTipCheckout, getBookTipEligibility } from '../lib/creatorPayments';
 
 interface ReaderProps {
   book: Book;
@@ -48,6 +49,12 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
   const [reviewBody, setReviewBody] = useState('');
   const [reviewSaving, setReviewSaving] = useState(false);
   const [reviewSaved, setReviewSaved] = useState(false);
+  const [tipEligible, setTipEligible] = useState(false);
+  const [showTip, setShowTip] = useState(false);
+  const [tipAmountCents, setTipAmountCents] = useState(500);
+  const [tipCustom, setTipCustom] = useState('');
+  const [tipSubmitting, setTipSubmitting] = useState(false);
+  const [tipError, setTipError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const chapter = book.chapters[currentChapterIndex];
@@ -149,6 +156,40 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
     if (!currentChapter) return;
     logRead(currentChapter.id, user.id).catch((error) => console.error('Read log failed:', error));
   }, [resumeReady, user, book.id, currentChapterIndex]);
+
+  // Whether this book's creator has finished Stripe onboarding - determines
+  // if the tip button is shown at all. Public data (no auth needed).
+  useEffect(() => {
+    let cancelled = false;
+    getBookTipEligibility(book.id)
+      .then((eligible) => {
+        if (!cancelled) setTipEligible(eligible);
+      })
+      .catch((error) => console.error('Tip eligibility check failed:', error));
+    return () => {
+      cancelled = true;
+    };
+  }, [book.id]);
+
+  const handleSubmitTip = async () => {
+    const customCents = tipCustom ? Math.round(parseFloat(tipCustom) * 100) : null;
+    const amountCents = customCents ?? tipAmountCents;
+
+    if (!Number.isInteger(amountCents) || amountCents < 50) {
+      setTipError('Please enter an amount of at least $0.50.');
+      return;
+    }
+
+    setTipError(null);
+    setTipSubmitting(true);
+    try {
+      const url = await createTipCheckout(book.id, amountCents);
+      window.location.href = url;
+    } catch (error) {
+      setTipError(error instanceof Error ? error.message : 'Something went wrong. Please try again.');
+      setTipSubmitting(false);
+    }
+  };
 
   const goToChapter = (index: number) => {
     setCurrentChapterIndex(index);
@@ -333,6 +374,28 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
           >
             <StarIcon />
           </button>
+          {tipEligible && (
+            <button
+              onClick={() => {
+                if (!user) {
+                  onRequireSignIn();
+                  return;
+                }
+                setTipError(null);
+                setShowTip(true);
+              }}
+              className={`p-2.5 rounded-full border backdrop-blur-md transition-colors shadow-sm ${
+                settings.theme === 'dark'
+                  ? 'bg-[#141414]/95 border-white/15 text-white hover:text-[#d4af37] hover:border-[#d4af37]/50'
+                  : settings.theme === 'sepia'
+                    ? 'bg-[#fcf8ed]/95 border-[#d9c8a3] text-[#5b4636] hover:text-[#8b4513] hover:border-[#8b4513]/40'
+                    : 'bg-white/95 border-black/10 text-[#1a1a1a] hover:text-[#8b4513] hover:border-[#8b4513]/40'
+              }`}
+              title="Tip the Author"
+            >
+              <TipIcon />
+            </button>
+          )}
         </div>
       </div>
 
@@ -439,6 +502,64 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
         </div>
       )}
 
+      {/* Tip Modal */}
+      {showTip && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md" onClick={() => setShowTip(false)}>
+          <div
+            className="bg-[#161616] text-white p-6 sm:p-8 md:p-10 rounded-sm shadow-2xl w-full max-w-sm border border-[#d4af37]/20"
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 className="text-xl sm:text-2xl font-['Playfair_Display'] mb-2 text-[#d4af37] italic">Tip the Author</h3>
+            <p className="text-sm text-gray-400 mb-6 sm:mb-8">
+              Support {book.author} directly. Orastories keeps a 10% platform fee; the rest goes straight to them.
+            </p>
+
+            <div className="space-y-6 sm:space-y-8">
+              <div>
+                <label className="block text-[10px] uppercase tracking-[0.2em] text-gray-500 mb-4">Amount</label>
+                <div className="flex gap-2">
+                  {[300, 500, 1000, 2000].map((cents) => (
+                    <button
+                      key={cents}
+                      onClick={() => {
+                        setTipAmountCents(cents);
+                        setTipCustom('');
+                      }}
+                      className={`flex-1 py-3 rounded-sm border text-sm transition-all ${
+                        !tipCustom && tipAmountCents === cents
+                          ? 'border-[#d4af37] text-[#d4af37]'
+                          : 'border-white/15 text-gray-300 hover:border-white/30'
+                      }`}
+                    >
+                      ${(cents / 100).toFixed(0)}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="number"
+                  min="0.50"
+                  step="0.01"
+                  value={tipCustom}
+                  onChange={(e) => setTipCustom(e.target.value)}
+                  placeholder="Custom amount"
+                  className="mt-3 w-full px-4 py-3 rounded-sm border border-white/15 bg-[#0f0f0f] text-white text-sm focus:outline-none focus:border-[#d4af37]"
+                />
+              </div>
+
+              {tipError && <p className="text-sm text-red-500">{tipError}</p>}
+
+              <button
+                onClick={handleSubmitTip}
+                disabled={tipSubmitting}
+                className="w-full py-4 border border-[#d4af37]/40 text-[#d4af37] text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-[#d4af37] hover:text-black transition-all disabled:opacity-40"
+              >
+                {tipSubmitting ? 'Redirecting...' : 'Continue to Payment'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content Area - Styled like a professional Folio Page */}
       <main className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 pt-28 sm:pt-36 md:pt-44 lg:pt-48 protected-text">
         {!resumeReady ? (
@@ -534,6 +655,13 @@ const MoonIcon = () => (
 const StarIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-60 hover:opacity-100 transition-opacity">
     <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+  </svg>
+);
+
+const TipIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-60 hover:opacity-100 transition-opacity">
+    <circle cx="12" cy="12" r="9"/>
+    <path d="M12 7v10M9.5 9.5c0-1.4 1.1-2.5 2.5-2.5s2.5.9 2.5 2.1c0 2.9-5 1.4-5 4.3 0 1.2 1.1 2.1 2.5 2.1s2.5-1.1 2.5-2.5"/>
   </svg>
 );
 

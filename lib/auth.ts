@@ -50,7 +50,7 @@ export async function ensureProfile(userId: string, rawUsername: unknown) {
 export async function fetchProfile(userId: string): Promise<Profile | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id,role,display_name,username,created_at')
+    .select('id,role,display_name,username,stripe_payouts_enabled,created_at')
     .eq('id', userId)
     .maybeSingle();
 
@@ -62,6 +62,7 @@ export async function fetchProfile(userId: string): Promise<Profile | null> {
     role: data.role,
     displayName: data.display_name,
     username: data.username,
+    stripePayoutsEnabled: data.stripe_payouts_enabled,
     createdAt: data.created_at
   };
 }
