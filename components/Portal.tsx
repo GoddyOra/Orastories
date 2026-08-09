@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { BookCatalogItem, loadBookById } from '../constants';
 import { BookmarkedBook, listBookmarksWithBooks } from '../lib/bookmarks';
 import { listMyReviews, MyReviewWithBook } from '../lib/reviews';
+import { PurchasedBook, listMyPurchasesWithBooks, getPurchaseDownloadUrl } from '../lib/purchases';
 import { isUsernameAvailable, claimUsername, USERNAME_PATTERN } from '../lib/username';
 import { getMyApplication, submitCreatorApplication } from '../lib/creatorApplications';
 import { CreatorApplication, ThemeMode } from '../types';
@@ -39,6 +40,8 @@ const Portal: React.FC<PortalProps> = ({ theme, onSelectBook, onClose }) => {
 
   const [bookmarks, setBookmarks] = useState<BookmarkedBook[]>([]);
   const [reviews, setReviews] = useState<MyReviewWithBook[]>([]);
+  const [purchases, setPurchases] = useState<PurchasedBook[]>([]);
+  const [downloadingBookId, setDownloadingBookId] = useState<string | null>(null);
   const [application, setApplication] = useState<CreatorApplication | null>(null);
   const [dashboardLoading, setDashboardLoading] = useState(false);
 
@@ -51,11 +54,17 @@ const Portal: React.FC<PortalProps> = ({ theme, onSelectBook, onClose }) => {
     let cancelled = false;
     setDashboardLoading(true);
 
-    Promise.all([listBookmarksWithBooks(user.id), listMyReviews(user.id), getMyApplication(user.id)])
-      .then(([bookmarkRows, reviewRows, applicationRow]) => {
+    Promise.all([
+      listBookmarksWithBooks(user.id),
+      listMyReviews(user.id),
+      listMyPurchasesWithBooks(user.id),
+      getMyApplication(user.id)
+    ])
+      .then(([bookmarkRows, reviewRows, purchaseRows, applicationRow]) => {
         if (cancelled) return;
         setBookmarks(bookmarkRows);
         setReviews(reviewRows);
+        setPurchases(purchaseRows);
         setApplication(applicationRow);
       })
       .catch((error) => console.error('Portal dashboard load failed:', error))
@@ -149,6 +158,18 @@ const Portal: React.FC<PortalProps> = ({ theme, onSelectBook, onClose }) => {
       publishedDate: '',
       loadBook: () => loadBookById(bookId)
     });
+  };
+
+  const handleDownload = async (bookId: string) => {
+    setDownloadingBookId(bookId);
+    try {
+      const url = await getPurchaseDownloadUrl(bookId);
+      window.location.href = url;
+    } catch (error) {
+      console.error('Failed to get download link:', error);
+    } finally {
+      setDownloadingBookId(null);
+    }
   };
 
   const cardBg = isLight ? 'bg-white border-black/10' : 'bg-[#161616] border-white/10';
@@ -334,6 +355,36 @@ const Portal: React.FC<PortalProps> = ({ theme, onSelectBook, onClose }) => {
                           </div>
                           <p className={`text-sm font-medium ${isLight ? 'text-gray-900' : 'text-white'}`}>{b.title}</p>
                         </button>
+                      ))}
+                    </div>
+                  )}
+                </section>
+
+                <section className="mb-14">
+                  <h2 className={`text-xs uppercase tracking-[0.3em] mb-5 ${textMuted}`}>My Purchases</h2>
+                  {purchases.length === 0 ? (
+                    <p className={`text-sm ${textMuted}`}>No purchased books yet.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {purchases.map((p) => (
+                        <div key={p.bookId} className={`flex items-center justify-between gap-4 rounded-sm border p-4 ${cardBg}`}>
+                          <div className="flex items-center gap-4 min-w-0">
+                            <div className="w-10 h-14 flex-shrink-0 overflow-hidden rounded-sm">
+                              <img src={p.cover} alt={p.title} className="w-full h-full object-cover" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className={`text-sm font-semibold truncate ${isLight ? 'text-gray-900' : 'text-white'}`}>{p.title}</p>
+                              <p className={`text-xs ${textMuted}`}>{p.author}</p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleDownload(p.bookId)}
+                            disabled={downloadingBookId === p.bookId}
+                            className="flex-shrink-0 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] border border-amber-700 text-amber-700 hover:bg-amber-700 hover:text-white transition-all disabled:opacity-50"
+                          >
+                            {downloadingBookId === p.bookId ? 'Preparing...' : 'Download'}
+                          </button>
+                        </div>
                       ))}
                     </div>
                   )}

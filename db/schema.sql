@@ -31,6 +31,7 @@ create table if not exists books (
   synopsis text,
   published_date text,
   is_published boolean not null default true,
+  price_cents int check (price_cents is null or price_cents >= 50), -- null = not for sale
   created_at timestamptz not null default now()
 );
 
@@ -114,6 +115,28 @@ create table if not exists tips (
   created_at timestamptz not null default now()
 );
 
+-- A reader's one-time purchase of a book's full PDF, same split mechanism
+-- and write-ownership rules as tips (only create-purchase-checkout and
+-- stripe-webhook, both service-role, ever write to this table). Unlike
+-- tips, creator visibility is via a join to books (books.creator_id)
+-- rather than a denormalized creator_id column here.
+create table if not exists purchases (
+  id uuid primary key default gen_random_uuid(),
+  book_id text not null references books(id) on delete cascade,
+  buyer_id uuid not null references profiles(id) on delete cascade,
+  amount_cents int not null,
+  platform_fee_cents int not null,
+  stripe_checkout_session_id text unique,
+  stripe_payment_intent_id text,
+  status text not null default 'pending' check (status in ('pending', 'succeeded', 'failed')),
+  created_at timestamptz not null default now()
+);
+-- Belt-and-suspenders against a double-click/race producing two succeeded
+-- rows for the same book+buyer (create-purchase-checkout also checks this
+-- at the application level, but this closes the race that check can't).
+create unique index if not exists purchases_one_succeeded_per_buyer
+  on purchases(book_id, buyer_id) where status = 'succeeded';
+
 -- Row Level Security
 
 alter table profiles enable row level security;
@@ -125,6 +148,7 @@ alter table bookmarks enable row level security;
 alter table payouts enable row level security;
 alter table creator_applications enable row level security;
 alter table tips enable row level security;
+alter table purchases enable row level security;
 
 create policy "profiles are publicly readable" on profiles
   for select using (true);
@@ -197,3 +221,38 @@ create policy "readers view tips they sent" on tips
   for select using (auth.uid() = reader_id);
 -- No insert/update policy: rows are only ever written by the Stripe Edge
 -- Functions via the service-role key (see comment on the table above).
+
+create policy "buyers view their own purchases" on purchases
+  for select using (auth.uid() = buyer_id);
+create policy "creators view purchases of their own books" on purchases
+  for select using (
+    exists (select 1 from books where books.id = purchases.book_id and books.creator_id = auth.uid())
+  );
+-- No insert/update policy: same reasoning as tips.
+
+-- Storage: one private bucket for canonical book PDFs, one file per book at
+-- {book_id}/manuscript.pdf. Storage policies are plain RLS on
+-- storage.objects, consistent with every other table here.
+insert into storage.buckets (id, name, public)
+values ('book-pdfs', 'book-pdfs', false)
+on conflict (id) do nothing;
+
+create policy "creators manage their own book pdfs" on storage.objects
+  for all using (
+    bucket_id = 'book-pdfs'
+    and exists (select 1 from books where books.id = (storage.foldername(name))[1] and books.creator_id = auth.uid())
+  ) with check (
+    bucket_id = 'book-pdfs'
+    and exists (select 1 from books where books.id = (storage.foldername(name))[1] and books.creator_id = auth.uid())
+  );
+
+create policy "buyers download pdfs they purchased" on storage.objects
+  for select using (
+    bucket_id = 'book-pdfs'
+    and exists (
+      select 1 from purchases
+      where purchases.book_id = (storage.foldername(name))[1]
+        and purchases.buyer_id = auth.uid()
+        and purchases.status = 'succeeded'
+    )
+  );

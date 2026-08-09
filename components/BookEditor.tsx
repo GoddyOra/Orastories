@@ -8,11 +8,13 @@ import {
   deleteChapter,
   getReadCountForBook,
   listChaptersForBook,
+  setBookPrice,
   setPublished,
   updateBook,
   updateChapter
 } from '../lib/creatorBooks';
 import { parseDocxToChapters, DraftChapter } from '../lib/docxImport';
+import { uploadBookPdf, getBookPdfStatus } from '../lib/purchases';
 
 interface BookEditorProps {
   theme: ThemeMode;
@@ -40,6 +42,20 @@ const BookEditor: React.FC<BookEditorProps> = ({ theme, book, onBack, onChange }
   const [isPublished, setIsPublished] = useState(book.isPublished);
   const [savingMeta, setSavingMeta] = useState(false);
   const [metaSaved, setMetaSaved] = useState(false);
+
+  const [priceInput, setPriceInput] = useState(book.priceCents ? (book.priceCents / 100).toFixed(2) : '');
+  const [savingPrice, setSavingPrice] = useState(false);
+  const [priceSaved, setPriceSaved] = useState(false);
+  const [priceError, setPriceError] = useState<string | null>(null);
+  const [hasPdf, setHasPdf] = useState(false);
+  const [uploadingPdf, setUploadingPdf] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getBookPdfStatus(book.id)
+      .then(setHasPdf)
+      .catch((error) => console.error('Failed to check PDF status:', error));
+  }, [book.id]);
 
   const [chapters, setChapters] = useState<CreatorChapter[]>([]);
   const [chaptersLoading, setChaptersLoading] = useState(true);
@@ -91,6 +107,46 @@ const BookEditor: React.FC<BookEditorProps> = ({ theme, book, onBack, onChange }
       onChange();
     } catch (error) {
       console.error('Failed to update published state:', error);
+    }
+  };
+
+  const handleSavePrice = async () => {
+    setPriceError(null);
+    const trimmed = priceInput.trim();
+    const priceCents = trimmed === '' ? null : Math.round(parseFloat(trimmed) * 100);
+
+    if (priceCents !== null && (!Number.isInteger(priceCents) || priceCents < 50)) {
+      setPriceError('Price must be at least $0.50, or left blank to keep this book not for sale.');
+      return;
+    }
+
+    setSavingPrice(true);
+    setPriceSaved(false);
+    try {
+      await setBookPrice(book.id, priceCents);
+      setPriceSaved(true);
+      onChange();
+    } catch (error) {
+      setPriceError(error instanceof Error ? error.message : 'Something went wrong.');
+    } finally {
+      setSavingPrice(false);
+    }
+  };
+
+  const handlePdfSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    setPdfError(null);
+    setUploadingPdf(true);
+    try {
+      await uploadBookPdf(book.id, file);
+      setHasPdf(true);
+    } catch (error) {
+      setPdfError(error instanceof Error ? error.message : 'Failed to upload PDF.');
+    } finally {
+      setUploadingPdf(false);
     }
   };
 
@@ -234,6 +290,47 @@ const BookEditor: React.FC<BookEditorProps> = ({ theme, book, onBack, onChange }
           >
             {savingMeta ? 'Saving...' : metaSaved ? 'Saved' : 'Save Details'}
           </button>
+        </div>
+      </div>
+
+      {/* Sell the Full PDF */}
+      <div className={`rounded-sm border p-6 sm:p-8 mb-10 ${cardCls}`}>
+        <h3 className={`text-xs uppercase tracking-[0.3em] mb-4 ${textMuted}`}>Sell the Full PDF</h3>
+        <div className="space-y-4">
+          <div>
+            <label className={`block text-[10px] uppercase tracking-[0.2em] mb-2 ${textMuted}`}>
+              Price (USD) — leave blank to keep this book not for sale
+            </label>
+            <input
+              className={inputCls}
+              placeholder="4.99"
+              inputMode="decimal"
+              value={priceInput}
+              onChange={(e) => {
+                setPriceInput(e.target.value);
+                setPriceSaved(false);
+              }}
+            />
+          </div>
+          {priceError && <p className="text-sm text-red-500">{priceError}</p>}
+          <button
+            onClick={handleSavePrice}
+            disabled={savingPrice}
+            className="px-6 py-3 border border-amber-700 text-amber-700 text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-amber-700 hover:text-white transition-all disabled:opacity-50"
+          >
+            {savingPrice ? 'Saving...' : priceSaved ? 'Saved' : 'Save Price'}
+          </button>
+
+          <div className="pt-4 flex items-center gap-4">
+            <label className="px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] border border-current cursor-pointer hover:text-amber-700">
+              {uploadingPdf ? 'Uploading...' : hasPdf ? 'Replace PDF' : 'Upload PDF'}
+              <input type="file" accept=".pdf" className="hidden" onChange={handlePdfSelected} disabled={uploadingPdf} />
+            </label>
+            <span className={`text-xs uppercase tracking-[0.15em] ${hasPdf ? 'text-amber-700' : textMuted}`}>
+              {hasPdf ? 'PDF uploaded ✓' : 'No PDF uploaded yet'}
+            </span>
+          </div>
+          {pdfError && <p className="text-sm text-red-500">{pdfError}</p>}
         </div>
       </div>
 

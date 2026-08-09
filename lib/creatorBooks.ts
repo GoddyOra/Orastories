@@ -17,6 +17,7 @@ export interface CreatorBook {
   synopsis: string;
   publishedDate: string;
   isPublished: boolean;
+  priceCents: number | null;
 }
 
 export interface BookFields {
@@ -37,14 +38,15 @@ function rowToCreatorBook(row: any): CreatorBook {
     genre: row.genre ?? '',
     synopsis: row.synopsis ?? '',
     publishedDate: row.published_date ?? '',
-    isPublished: row.is_published
+    isPublished: row.is_published,
+    priceCents: row.price_cents ?? null
   };
 }
 
 export async function listMyBooks(creatorId: string): Promise<CreatorBook[]> {
   const { data, error } = await supabase
     .from('books')
-    .select('id,title,author,cover,genre,synopsis,published_date,is_published')
+    .select('id,title,author,cover,genre,synopsis,published_date,is_published,price_cents')
     .eq('creator_id', creatorId)
     .order('created_at', { ascending: false });
 
@@ -95,6 +97,11 @@ export async function updateBook(bookId: string, fields: BookFields) {
 
 export async function setPublished(bookId: string, isPublished: boolean) {
   const { error } = await supabase.from('books').update({ is_published: isPublished }).eq('id', bookId);
+  if (error) throw error;
+}
+
+export async function setBookPrice(bookId: string, priceCents: number | null) {
+  const { error } = await supabase.from('books').update({ price_cents: priceCents }).eq('id', bookId);
   if (error) throw error;
 }
 

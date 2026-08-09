@@ -48,8 +48,12 @@ Deno.serve(async (req: Request) => {
   try {
     switch (event.type) {
       case 'checkout.session.completed': {
-        const session = event.data.object as { metadata?: { tip_id?: string }; payment_intent?: string | null };
+        const session = event.data.object as {
+          metadata?: { tip_id?: string; purchase_id?: string };
+          payment_intent?: string | null;
+        };
         const tipId = session.metadata?.tip_id;
+        const purchaseId = session.metadata?.purchase_id;
         if (tipId) {
           const { error } = await supabaseAdmin
             .from('tips')
@@ -58,6 +62,15 @@ Deno.serve(async (req: Request) => {
               stripe_payment_intent_id: session.payment_intent ?? null
             })
             .eq('id', tipId);
+          if (error) throw error;
+        } else if (purchaseId) {
+          const { error } = await supabaseAdmin
+            .from('purchases')
+            .update({
+              status: 'succeeded',
+              stripe_payment_intent_id: session.payment_intent ?? null
+            })
+            .eq('id', purchaseId);
           if (error) throw error;
         }
         break;
