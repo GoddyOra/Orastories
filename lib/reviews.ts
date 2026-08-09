@@ -33,6 +33,28 @@ export interface MyReviewWithBook extends MyReview {
   cover: string;
 }
 
+export interface BookRatingSummary {
+  averageRating: number;
+  reviewCount: number;
+}
+
+export async function getBookRatings(): Promise<Record<string, BookRatingSummary>> {
+  const { data, error } = await supabase.from('reviews').select('book_id, rating');
+  if (error) throw error;
+
+  const totals: Record<string, { sum: number; count: number }> = {};
+  (data ?? []).forEach((row) => {
+    const entry = totals[row.book_id] ?? { sum: 0, count: 0 };
+    entry.sum += row.rating;
+    entry.count += 1;
+    totals[row.book_id] = entry;
+  });
+
+  return Object.fromEntries(
+    Object.entries(totals).map(([bookId, { sum, count }]) => [bookId, { averageRating: sum / count, reviewCount: count }])
+  );
+}
+
 export interface RecentReview {
   id: string;
   rating: number;

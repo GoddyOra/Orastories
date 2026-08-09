@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ThemeMode } from '../types';
 import { BookCatalogItem, fetchBookCatalog } from '../constants';
+import { BookRatingSummary, getBookRatings } from '../lib/reviews';
 
 interface LibraryProps {
   onSelectBook: (book: BookCatalogItem) => void;
@@ -30,6 +31,7 @@ const Library: React.FC<LibraryProps> = ({ onSelectBook, theme }) => {
   const [books, setBooks] = useState<BookCatalogItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [ratings, setRatings] = useState<Record<string, BookRatingSummary>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -48,6 +50,24 @@ const Library: React.FC<LibraryProps> = ({ onSelectBook, theme }) => {
         if (cancelled) return;
         setIsLoading(false);
       });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Ratings are a supplementary display, not core function - a failure here
+  // shouldn't block or error out the catalog itself, so it's a separate
+  // effect with no shared loading/error state.
+  useEffect(() => {
+    let cancelled = false;
+
+    getBookRatings()
+      .then((summary) => {
+        if (cancelled) return;
+        setRatings(summary);
+      })
+      .catch((error) => console.error('Book ratings load failed:', error));
 
     return () => {
       cancelled = true;
@@ -122,6 +142,16 @@ const Library: React.FC<LibraryProps> = ({ onSelectBook, theme }) => {
               <p className="text-gray-500 text-[10px] mt-3 uppercase tracking-[0.3em] font-medium">
                 {book.author} — {book.publishedDate}
               </p>
+              {ratings[book.id] && (
+                <p className={`text-xs mt-3 tracking-wide ${isLight ? 'text-gray-600' : 'text-gray-400'}`}>
+                  <span className="text-amber-600">
+                    {'★'.repeat(Math.round(ratings[book.id].averageRating))}
+                    {'☆'.repeat(5 - Math.round(ratings[book.id].averageRating))}
+                  </span>{' '}
+                  {ratings[book.id].averageRating.toFixed(1)} ({ratings[book.id].reviewCount}{' '}
+                  review{ratings[book.id].reviewCount === 1 ? '' : 's'})
+                </p>
+              )}
             </div>
           </div>
         ))}
