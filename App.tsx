@@ -142,35 +142,37 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {selectedBook ? (
-        <div className="animate-readerFadeIn">
-          <Reader
-            book={selectedBook}
-            onClose={() => setSelectedBook(null)}
-            externalTheme={theme}
-            onThemeChange={setTheme}
-            onRequireSignIn={handleOpenPortal}
-          />
-        </div>
-      ) : showPortal ? (
-        <Portal theme={theme} onSelectBook={handleSelectBook} onClose={() => setShowPortal(false)} />
-      ) : (
-        <>
-          {loadError && (
-            <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[96] rounded border border-red-500/30 bg-red-100/90 text-red-900 px-4 py-2 text-sm">
-              {loadError}
-            </div>
-          )}
-          {isLoadingBook && (
-            <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/25 backdrop-blur-[1px]">
-              <div className="rounded border border-black/10 bg-white/95 px-5 py-3 text-sm font-semibold text-[#1a1a1a]">
-                Opening book...
+      <main>
+        {selectedBook ? (
+          <div className="animate-readerFadeIn">
+            <Reader
+              book={selectedBook}
+              onClose={() => setSelectedBook(null)}
+              externalTheme={theme}
+              onThemeChange={setTheme}
+              onRequireSignIn={handleOpenPortal}
+            />
+          </div>
+        ) : showPortal ? (
+          <Portal theme={theme} onSelectBook={handleSelectBook} onClose={() => setShowPortal(false)} />
+        ) : (
+          <>
+            {loadError && (
+              <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[96] rounded border border-red-500/30 bg-red-100/90 text-red-900 px-4 py-2 text-sm">
+                {loadError}
               </div>
-            </div>
-          )}
-          <Library onSelectBook={handleSelectBook} theme={theme} />
-        </>
-      )}
+            )}
+            {isLoadingBook && (
+              <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/25 backdrop-blur-[1px]">
+                <div className="rounded border border-black/10 bg-white/95 px-5 py-3 text-sm font-semibold text-[#1a1a1a]">
+                  Opening book...
+                </div>
+              </div>
+            )}
+            <Library onSelectBook={handleSelectBook} theme={theme} />
+          </>
+        )}
+      </main>
 
       <style>{`
         @keyframes fadeIn {

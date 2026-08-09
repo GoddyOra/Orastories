@@ -4,10 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Orastories | Reviews</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <meta name="description" content="Read what Orastories readers are saying about Goddy Ora's contemporary romance novels — real reviews from the reading community.">
+  <link rel="icon" type="image/svg+xml" href="images/logos/orastories-logo-option-2.svg">
+  <link rel="stylesheet" href="styles/tailwind.generated.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Montserrat:wght@300;400;600&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Montserrat:wght@300;400;600&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap">
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Montserrat:wght@300;400;600&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Montserrat:wght@300;400;600&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet"></noscript>
   <style>
     ::-webkit-scrollbar {
       width: 8px;
@@ -35,19 +39,19 @@
   </style>
 </head>
 <body id="reviewsBody" class="bg-[#fcfaf7] text-[#1a1a1a] font-['Montserrat'] transition-colors duration-500">
-  <nav class="fixed top-0 left-0 right-0 bg-white/95 dark-mode:bg-black/95 backdrop-blur z-50 border-b border-gray-200 dark-mode:border-white/10 transition-colors duration-500">
+  <nav class="fixed top-0 left-0 right-0 bg-white/95 dark:bg-black/95 backdrop-blur z-50 border-b border-gray-200 dark:border-white/10 transition-colors duration-500">
     <div class="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-3 md:py-4 flex flex-wrap justify-between items-center gap-3">
       <a href="index.html" class="inline-flex items-center transition-opacity hover:opacity-90" aria-label="Orastories Home">
         <img src="images/logos/orastories-logo-option-2.svg" alt="Orastories" class="h-10 w-auto" />
       </a>
       <div class="flex flex-wrap justify-end gap-3 sm:gap-5 md:gap-8 items-center text-sm sm:text-base">
-        <a href="index.html" class="hover:text-amber-700 dark-mode:hover:text-amber-400 transition-colors">Home</a>
-        <a href="about.html" class="hover:text-amber-700 dark-mode:hover:text-amber-400 transition-colors">About</a>
-        <a href="books.html" class="hover:text-amber-700 dark-mode:hover:text-amber-400 transition-colors">Books</a>
-        <a href="reviews.html" class="hover:text-amber-700 dark-mode:hover:text-amber-400 transition-colors">Reviews</a>
-        <a href="blog.html" class="hover:text-amber-700 dark-mode:hover:text-amber-400 transition-colors">Blog</a>
-        <a href="contact.html" class="hover:text-amber-700 dark-mode:hover:text-amber-400 transition-colors">Contact</a>
-        <button id="themeToggle" class="p-2 rounded-full hover:bg-gray-200 dark-mode:hover:bg-gray-800 transition-colors" aria-label="Toggle Theme">
+        <a href="index.html" class="hover:text-amber-700 dark:hover:text-amber-400 transition-colors">Home</a>
+        <a href="about.html" class="hover:text-amber-700 dark:hover:text-amber-400 transition-colors">About</a>
+        <a href="books.html" class="hover:text-amber-700 dark:hover:text-amber-400 transition-colors">Books</a>
+        <a href="reviews.html" class="hover:text-amber-700 dark:hover:text-amber-400 transition-colors">Reviews</a>
+        <a href="blog.html" class="hover:text-amber-700 dark:hover:text-amber-400 transition-colors">Blog</a>
+        <a href="contact.html" class="hover:text-amber-700 dark:hover:text-amber-400 transition-colors">Contact</a>
+        <button id="themeToggle" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors" aria-label="Toggle Theme">
           <svg id="sunIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style="display: none;">
             <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
           </svg>
@@ -60,69 +64,69 @@
   </nav>
 
   <main class="pt-20 max-w-4xl mx-auto px-3 sm:px-4 md:px-6 py-16">
-    <h1 class="text-3xl font-['Playfair Display'] font-bold mb-12 text-center dark-mode:text-white">Reader Reviews</h1>
+    <h1 class="text-3xl font-['Playfair Display'] font-bold mb-12 text-center dark:text-white">Reader Reviews</h1>
     
     <div class="space-y-8">
       <!-- Review Card -->
-      <div class="border-l-4 border-amber-700 dark-mode:border-amber-400 bg-white dark-mode:bg-gray-900 p-6 rounded transition-all duration-300">
+      <div class="border-l-4 border-amber-700 dark:border-amber-400 bg-white dark:bg-gray-900 p-6 rounded transition-all duration-300">
         <div class="flex justify-between items-start mb-4">
           <div>
-            <h3 class="text-xl font-bold dark-mode:text-white">Unforgettable Journey</h3>
-            <p class="text-sm text-gray-600 dark-mode:text-gray-400">Sarah M.</p>
-            <p class="text-xs uppercase tracking-[0.12em] text-amber-700 dark-mode:text-amber-400 mt-1">Book: Lust and Lies</p>
+            <h3 class="text-xl font-bold dark:text-white">Unforgettable Journey</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400">Sarah M.</p>
+            <p class="text-xs uppercase tracking-[0.12em] text-amber-700 dark:text-amber-400 mt-1">Book: Lust and Lies</p>
           </div>
-          <div class="text-amber-700 dark-mode:text-amber-400">★★★★★</div>
+          <div class="text-amber-700 dark:text-amber-400">★★★★★</div>
         </div>
-        <p class="text-gray-700 dark-mode:text-gray-300 leading-relaxed">
+        <p class="text-gray-700 dark:text-gray-300 leading-relaxed">
           This book completely captured my imagination from the first page. The characters are so well-developed and the plot keeps you guessing until the very end. I couldn't put it down!
         </p>
       </div>
 
-      <div class="border-l-4 border-amber-700 dark-mode:border-amber-400 bg-white dark-mode:bg-gray-900 p-6 rounded transition-all duration-300">
+      <div class="border-l-4 border-amber-700 dark:border-amber-400 bg-white dark:bg-gray-900 p-6 rounded transition-all duration-300">
         <div class="flex justify-between items-start mb-4">
           <div>
-            <h3 class="text-xl font-bold dark-mode:text-white">A True Masterpiece</h3>
-            <p class="text-sm text-gray-600 dark-mode:text-gray-400">James T.</p>
-            <p class="text-xs uppercase tracking-[0.12em] text-amber-700 dark-mode:text-amber-400 mt-1">Book: Mile High Club</p>
+            <h3 class="text-xl font-bold dark:text-white">A True Masterpiece</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400">James T.</p>
+            <p class="text-xs uppercase tracking-[0.12em] text-amber-700 dark:text-amber-400 mt-1">Book: Mile High Club</p>
           </div>
-          <div class="text-amber-700 dark-mode:text-amber-400">★★★★★</div>
+          <div class="text-amber-700 dark:text-amber-400">★★★★★</div>
         </div>
-        <p class="text-gray-700 dark-mode:text-gray-300 leading-relaxed">
+        <p class="text-gray-700 dark:text-gray-300 leading-relaxed">
           The writing is exquisite. Every paragraph is crafted with such care and attention to detail. This author has a gift for weaving profound themes into an engaging narrative.
         </p>
       </div>
 
-      <div class="border-l-4 border-amber-700 dark-mode:border-amber-400 bg-white dark-mode:bg-gray-900 p-6 rounded transition-all duration-300">
+      <div class="border-l-4 border-amber-700 dark:border-amber-400 bg-white dark:bg-gray-900 p-6 rounded transition-all duration-300">
         <div class="flex justify-between items-start mb-4">
           <div>
-            <h3 class="text-xl font-bold dark-mode:text-white">Emotionally Resonant</h3>
-            <p class="text-sm text-gray-600 dark-mode:text-gray-400">Emma R.</p>
-            <p class="text-xs uppercase tracking-[0.12em] text-amber-700 dark-mode:text-amber-400 mt-1">Book: Lust and Lies</p>
+            <h3 class="text-xl font-bold dark:text-white">Emotionally Resonant</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400">Emma R.</p>
+            <p class="text-xs uppercase tracking-[0.12em] text-amber-700 dark:text-amber-400 mt-1">Book: Lust and Lies</p>
           </div>
-          <div class="text-amber-700 dark-mode:text-amber-400">★★★★★</div>
+          <div class="text-amber-700 dark:text-amber-400">★★★★★</div>
         </div>
-        <p class="text-gray-700 dark-mode:text-gray-300 leading-relaxed">
+        <p class="text-gray-700 dark:text-gray-300 leading-relaxed">
           I found myself deeply connected to the protagonist's journey. The exploration of human emotions felt so authentic and real. This is the kind of book that stays with you long after you've finished it.
         </p>
       </div>
 
-      <div class="border-l-4 border-amber-700 dark-mode:border-amber-400 bg-white dark-mode:bg-gray-900 p-6 rounded transition-all duration-300">
+      <div class="border-l-4 border-amber-700 dark:border-amber-400 bg-white dark:bg-gray-900 p-6 rounded transition-all duration-300">
         <div class="flex justify-between items-start mb-4">
           <div>
-            <h3 class="text-xl font-bold dark-mode:text-white">Highly Recommended</h3>
-            <p class="text-sm text-gray-600 dark-mode:text-gray-400">Michael K.</p>
-            <p class="text-xs uppercase tracking-[0.12em] text-amber-700 dark-mode:text-amber-400 mt-1">Book: Mile High Club</p>
+            <h3 class="text-xl font-bold dark:text-white">Highly Recommended</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400">Michael K.</p>
+            <p class="text-xs uppercase tracking-[0.12em] text-amber-700 dark:text-amber-400 mt-1">Book: Mile High Club</p>
           </div>
-          <div class="text-amber-700 dark-mode:text-amber-400">★★★★☆</div>
+          <div class="text-amber-700 dark:text-amber-400">★★★★☆</div>
         </div>
-        <p class="text-gray-700 dark-mode:text-gray-300 leading-relaxed">
+        <p class="text-gray-700 dark:text-gray-300 leading-relaxed">
           A captivating read that explores complex themes with nuance and grace. If you enjoy thoughtful, character-driven stories, this is definitely worth your time.
         </p>
       </div>
     </div>
   </main>
 
-  <footer class="border-t border-gray-200 dark-mode:border-white/10 mt-16 py-8 text-center text-gray-600 dark-mode:text-gray-400 transition-colors duration-500">
+  <footer class="border-t border-gray-200 dark:border-white/10 mt-16 py-8 text-center text-gray-600 dark:text-gray-400 transition-colors duration-500">
     <p>&copy; 2026 Orastories. All rights reserved.</p>
   </footer>
 

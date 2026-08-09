@@ -12,6 +12,7 @@ dist
 dist-ssr
 *.local
 .env
+styles/tailwind.generated.css
 
 # Editor directories and files
 .vscode/*

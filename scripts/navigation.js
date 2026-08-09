@@ -53,9 +53,9 @@
       }
       #themeToggle.is-mobile-theme-toggle {
         position: fixed;
-        right: 3.8rem;
-        top: calc(env(safe-area-inset-top, 0px) + 0.7rem);
-        bottom: auto;
+        right: 1.1rem;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 1.1rem);
+        top: auto;
         z-index: 95;
         border: 1px solid rgba(17, 24, 39, 0.12);
         border-radius: 9999px;
@@ -132,7 +132,7 @@
   const collapseBtn = document.createElement('button');
   collapseBtn.id = 'navCollapseToggle';
   collapseBtn.type = 'button';
-  collapseBtn.className = 'p-2 rounded-full border border-black/15 dark-mode:border-white/15 hover:bg-black/5 dark-mode:hover:bg-white/10 transition-colors';
+  collapseBtn.className = 'p-2 rounded-full border border-black/15 dark:border-white/15 hover:bg-black/5 dark:hover:bg-white/10 transition-colors';
   collapseBtn.setAttribute('aria-controls', 'siteNavLinks');
 
   const getToggleIcon = (isCollapsed) =>
@@ -160,7 +160,7 @@
   navLinks.forEach((anchor) => {
     const href = normalizePath(anchor.getAttribute('href'));
     if (href !== currentPath) return;
-    anchor.classList.add('font-semibold', 'text-amber-700', 'dark-mode:text-amber-400');
+    anchor.classList.add('font-semibold', 'text-amber-700', 'dark:text-amber-400');
     anchor.setAttribute('aria-current', 'page');
   });
 

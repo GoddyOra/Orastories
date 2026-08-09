@@ -4,10 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Orastories | Books</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <meta name="description" content="Browse the full Orastories catalog of contemporary romance novels by Goddy Ora, with synopses, genres, and free online reading.">
+  <link rel="icon" type="image/svg+xml" href="images/logos/orastories-logo-option-2.svg">
+  <link rel="stylesheet" href="styles/tailwind.generated.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Montserrat:wght@300;400;600&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Montserrat:wght@300;400;600&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap">
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Montserrat:wght@300;400;600&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Montserrat:wght@300;400;600&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet"></noscript>
   <style>
     ::-webkit-scrollbar { width: 8px; }
     ::-webkit-scrollbar-track { background: #fcfaf7; }
@@ -22,19 +26,19 @@
   </style>
 </head>
 <body id="booksBody" class="bg-[#fcfaf7] text-[#1a1a1a] font-['Montserrat'] transition-colors duration-500">
-  <nav class="fixed top-0 left-0 right-0 bg-white/95 dark-mode:bg-black/95 backdrop-blur z-50 border-b border-gray-200 dark-mode:border-white/10 transition-colors duration-500">
+  <nav class="fixed top-0 left-0 right-0 bg-white/95 dark:bg-black/95 backdrop-blur z-50 border-b border-gray-200 dark:border-white/10 transition-colors duration-500">
     <div class="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-3 md:py-4 flex flex-wrap justify-between items-center gap-3">
       <a href="index.html" class="inline-flex items-center transition-opacity hover:opacity-90" aria-label="Orastories Home">
         <img src="images/logos/orastories-logo-option-2.svg" alt="Orastories" class="h-10 w-auto" />
       </a>
       <div class="flex flex-wrap justify-end gap-3 sm:gap-5 md:gap-8 items-center text-sm sm:text-base">
-        <a href="index.html" class="hover:text-amber-700 dark-mode:hover:text-amber-400 transition-colors">Home</a>
-        <a href="about.html" class="hover:text-amber-700 dark-mode:hover:text-amber-400 transition-colors">About</a>
-        <a href="books.html" class="hover:text-amber-700 dark-mode:hover:text-amber-400 transition-colors">Books</a>
-        <a href="reviews.html" class="hover:text-amber-700 dark-mode:hover:text-amber-400 transition-colors">Reviews</a>
-        <a href="blog.html" class="hover:text-amber-700 dark-mode:hover:text-amber-400 transition-colors">Blog</a>
-        <a href="contact.html" class="hover:text-amber-700 dark-mode:hover:text-amber-400 transition-colors">Contact</a>
-        <button id="themeToggle" class="p-2 rounded-full hover:bg-gray-200 dark-mode:hover:bg-gray-800 transition-colors" aria-label="Toggle Theme">
+        <a href="index.html" class="hover:text-amber-700 dark:hover:text-amber-400 transition-colors">Home</a>
+        <a href="about.html" class="hover:text-amber-700 dark:hover:text-amber-400 transition-colors">About</a>
+        <a href="books.html" class="hover:text-amber-700 dark:hover:text-amber-400 transition-colors">Books</a>
+        <a href="reviews.html" class="hover:text-amber-700 dark:hover:text-amber-400 transition-colors">Reviews</a>
+        <a href="blog.html" class="hover:text-amber-700 dark:hover:text-amber-400 transition-colors">Blog</a>
+        <a href="contact.html" class="hover:text-amber-700 dark:hover:text-amber-400 transition-colors">Contact</a>
+        <button id="themeToggle" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors" aria-label="Toggle Theme">
           <svg id="sunIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
             <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
           </svg>
@@ -46,30 +50,30 @@
 
   <main class="pt-24 max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-12 md:py-16">
     <div class="text-center mb-12 md:mb-14">
-      <p class="text-sm md:text-base text-gray-700 dark-mode:text-gray-300 max-w-3xl mx-auto leading-relaxed">Explore all Orastories titles below, including yet-to-be-published new releases. You can preview <span class="font-semibold">Chapter 1 only</span> and purchase the full PDF edition, which comes in a more professionally styled format, to continue reading.</p>
+      <p class="text-sm md:text-base text-gray-700 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed">Explore all Orastories titles below, including yet-to-be-published new releases. You can preview <span class="font-semibold">Chapter 1 only</span> and purchase the full PDF edition, which comes in a more professionally styled format, to continue reading.</p>
     </div>
     <div id="booksGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 items-stretch"></div>
   </main>
 
   <div id="previewModal" class="hidden fixed inset-0 z-[60] bg-black/70 p-3 sm:p-5 md:p-8" aria-hidden="true">
-    <div class="max-w-4xl h-full mx-auto bg-[#fcfaf7] dark-mode:bg-[#111111] border border-black/10 dark-mode:border-white/10 rounded-lg shadow-2xl flex flex-col">
-      <div class="px-4 sm:px-6 py-4 border-b border-black/10 dark-mode:border-white/10 flex items-center justify-between gap-4">
+    <div class="max-w-4xl h-full mx-auto bg-[#fcfaf7] dark:bg-[#111111] border border-black/10 dark:border-white/10 rounded-lg shadow-2xl flex flex-col">
+      <div class="px-4 sm:px-6 py-4 border-b border-black/10 dark:border-white/10 flex items-center justify-between gap-4">
         <div>
-          <p class="text-[10px] uppercase tracking-[0.3em] text-amber-700 dark-mode:text-amber-400">Chapter 1 Preview</p>
-          <h2 id="modalTitle" class="text-xl sm:text-2xl font-['Playfair Display'] font-bold dark-mode:text-white"></h2>
-          <p id="modalMeta" class="text-xs text-gray-600 dark-mode:text-gray-400 mt-1"></p>
+          <p class="text-[10px] uppercase tracking-[0.3em] text-amber-700 dark:text-amber-400">Chapter 1 Preview</p>
+          <h2 id="modalTitle" class="text-xl sm:text-2xl font-['Playfair Display'] font-bold dark:text-white"></h2>
+          <p id="modalMeta" class="text-xs text-gray-600 dark:text-gray-400 mt-1"></p>
         </div>
-        <button id="closeModal" class="px-3 py-2 text-xs uppercase tracking-[0.2em] border border-black/20 dark-mode:border-white/20 rounded hover:bg-black/5 dark-mode:hover:bg-white/5 transition-colors">Close</button>
+        <button id="closeModal" class="px-3 py-2 text-xs uppercase tracking-[0.2em] border border-black/20 dark:border-white/20 rounded hover:bg-black/5 dark:hover:bg-white/5 transition-colors">Close</button>
       </div>
-      <div id="modalContent" class="flex-1 overflow-y-auto px-4 sm:px-6 py-5 sm:py-6 text-[15px] sm:text-[17px] leading-8 font-['EB Garamond'] text-justify whitespace-pre-wrap dark-mode:text-gray-200"></div>
-      <div class="px-4 sm:px-6 py-4 border-t border-black/10 dark-mode:border-white/10 flex items-center justify-between gap-3 flex-wrap">
-        <p class="text-xs text-gray-600 dark-mode:text-gray-400">End of free preview.</p>
-        <a id="modalBuyLink" href="#" class="px-4 py-2 text-xs uppercase tracking-[0.2em] font-semibold border border-amber-700 dark-mode:border-amber-400 text-amber-700 dark-mode:text-amber-400 rounded hover:bg-amber-700 hover:text-white dark-mode:hover:bg-amber-400 dark-mode:hover:text-black transition-all">Buy Full PDF</a>
+      <div id="modalContent" class="flex-1 overflow-y-auto px-4 sm:px-6 py-5 sm:py-6 text-[15px] sm:text-[17px] leading-8 font-['EB Garamond'] text-justify whitespace-pre-wrap dark:text-gray-200"></div>
+      <div class="px-4 sm:px-6 py-4 border-t border-black/10 dark:border-white/10 flex items-center justify-between gap-3 flex-wrap">
+        <p class="text-xs text-gray-600 dark:text-gray-400">End of free preview.</p>
+        <a id="modalBuyLink" href="#" class="px-4 py-2 text-xs uppercase tracking-[0.2em] font-semibold border border-amber-700 dark:border-amber-400 text-amber-700 dark:text-amber-400 rounded hover:bg-amber-700 hover:text-white dark:hover:bg-amber-400 dark:hover:text-black transition-all">Buy Full PDF</a>
       </div>
     </div>
   </div>
 
-  <footer class="border-t border-gray-200 dark-mode:border-white/10 mt-8 md:mt-14 py-8 text-center text-gray-600 dark-mode:text-gray-400 transition-colors duration-500">
+  <footer class="border-t border-gray-200 dark:border-white/10 mt-8 md:mt-14 py-8 text-center text-gray-600 dark:text-gray-400 transition-colors duration-500">
     <p>&copy; 2026 Orastories. All rights reserved.</p>
   </footer>
 
@@ -92,23 +96,23 @@
     const renderBooks = () => {
       BOOKS.forEach((book) => {
         const card = document.createElement('article');
-        card.className = 'h-full flex flex-col border border-gray-200 dark-mode:border-white/10 rounded-lg p-6 hover:shadow-lg dark-mode:hover:shadow-amber-400/20 transition-all duration-300 bg-white dark-mode:bg-gray-900';
+        card.className = 'h-full flex flex-col border border-gray-200 dark:border-white/10 rounded-lg p-6 hover:shadow-lg dark:hover:shadow-amber-400/20 transition-all duration-300 bg-white dark:bg-gray-900';
 
         const buySubject = encodeURIComponent('Purchase ' + book.title + ' PDF');
         const buyBody = encodeURIComponent('Hello Orastories,\n\nI would like to purchase the full PDF version of "' + book.title + '".\n\nPlease share pricing and payment instructions.\n');
         const buyHref = 'mailto:hello@orastories.com?subject=' + buySubject + '&body=' + buyBody;
 
         card.innerHTML =
-          '<div class="aspect-[2/3] overflow-hidden rounded mb-4 bg-gray-100 dark-mode:bg-gray-800">' +
+          '<div class="aspect-[2/3] overflow-hidden rounded mb-4 bg-gray-100 dark:bg-gray-800">' +
             '<img src="' + book.cover + '" alt="' + book.title + ' cover" class="w-full h-full object-cover" loading="lazy" />' +
           '</div>' +
-          '<h3 class="text-2xl font-bold mb-1 dark-mode:text-white" style="font-family: &quot;Playfair Display&quot;, serif;">' + book.title + '</h3>' +
-          '<p class="text-sm text-gray-600 dark-mode:text-gray-400 mb-2">' + book.author + ' • ' + book.publishedDate + '</p>' +
-          '<p class="text-[11px] uppercase tracking-[0.2em] text-amber-700 dark-mode:text-amber-400 mb-3">' + book.genre + '</p>' +
-          '<p class="text-gray-700 dark-mode:text-gray-300 mb-6 leading-relaxed text-sm flex-1">' + book.synopsis + '</p>' +
+          '<h3 class="text-2xl font-bold mb-1 dark:text-white" style="font-family: &quot;Playfair Display&quot;, serif;">' + book.title + '</h3>' +
+          '<p class="text-sm text-gray-600 dark:text-gray-400 mb-2">' + book.author + ' • ' + book.publishedDate + '</p>' +
+          '<p class="text-[11px] uppercase tracking-[0.2em] text-amber-700 dark:text-amber-400 mb-3">' + book.genre + '</p>' +
+          '<p class="text-gray-700 dark:text-gray-300 mb-6 leading-relaxed text-sm flex-1">' + book.synopsis + '</p>' +
           '<div class="mt-auto flex flex-col gap-3">' +
-            '<button class="preview-btn w-full py-2 border border-amber-700 dark-mode:border-amber-400 text-amber-700 dark-mode:text-amber-400 rounded hover:bg-amber-700 hover:text-white dark-mode:hover:bg-amber-400 dark-mode:hover:text-black transition-all text-xs uppercase tracking-[0.2em] font-semibold">Preview Chapter 1</button>' +
-            '<a href="' + buyHref + '" class="w-full py-2 border border-black/20 dark-mode:border-white/20 rounded hover:bg-black/5 dark-mode:hover:bg-white/5 transition-all text-xs uppercase tracking-[0.2em] font-semibold text-center">Buy Full PDF</a>' +
+            '<button class="preview-btn w-full py-2 border border-amber-700 dark:border-amber-400 text-amber-700 dark:text-amber-400 rounded hover:bg-amber-700 hover:text-white dark:hover:bg-amber-400 dark:hover:text-black transition-all text-xs uppercase tracking-[0.2em] font-semibold">Preview Chapter 1</button>' +
+            '<a href="' + buyHref + '" class="w-full py-2 border border-black/20 dark:border-white/20 rounded hover:bg-black/5 dark:hover:bg-white/5 transition-all text-xs uppercase tracking-[0.2em] font-semibold text-center">Buy Full PDF</a>' +
           '</div>';
 
         card.querySelector('.preview-btn').addEventListener('click', () => {

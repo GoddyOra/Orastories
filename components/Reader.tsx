@@ -606,7 +606,7 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
           </article>
 
           {/* Footer Navigation within the Folio */}
-          <div className="mt-20 md:mt-32 lg:mt-48 border-t border-current/5 pt-10 md:pt-16 lg:pt-20 flex justify-between items-center gap-6">
+          <div className="mt-20 md:mt-32 lg:mt-48 border-t border-current pt-10 md:pt-16 lg:pt-20 flex justify-between items-center gap-6">
             <button
               disabled={currentChapterIndex === 0}
               onClick={() => goToChapter(currentChapterIndex - 1)}

@@ -41,6 +41,16 @@ const copyImages = async () => {
   });
 };
 
+const copyGeneratedStyles = async () => {
+  const distStylesDir = path.join(distDir, 'styles');
+  await mkdir(distStylesDir, { recursive: true });
+  await copyFile(
+    path.join(rootDir, 'styles', 'tailwind.generated.css'),
+    path.join(distStylesDir, 'tailwind.generated.css')
+  );
+};
+
 await copyStaticPages();
 await copyNavigationScript();
 await copyImages();
+await copyGeneratedStyles();

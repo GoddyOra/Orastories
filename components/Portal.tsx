@@ -289,7 +289,7 @@ const Portal: React.FC<PortalProps> = ({ theme, onSelectBook, onClose }) => {
             </button>
 
             {profile?.role === 'creator' && (
-              <div className="flex gap-6 mb-10 border-b border-current/10">
+              <div className="flex gap-6 mb-10 border-b border-current">
                 <button
                   onClick={() => setActiveTab('reading')}
                   className={`pb-3 text-xs uppercase tracking-[0.2em] font-semibold border-b-2 transition-colors ${
