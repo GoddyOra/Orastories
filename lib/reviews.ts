@@ -33,6 +33,39 @@ export interface MyReviewWithBook extends MyReview {
   cover: string;
 }
 
+export interface RecentReview {
+  id: string;
+  rating: number;
+  body: string | null;
+  bookTitle: string;
+  reviewerName: string;
+}
+
+export async function listRecentReviews(limit = 20): Promise<RecentReview[]> {
+  const { data, error } = await supabase
+    .from('reviews')
+    .select('id,rating,body,books(title),profiles(username,display_name)')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+
+  return (data ?? [])
+    .map((row) => {
+      const book = Array.isArray(row.books) ? row.books[0] : row.books;
+      const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+      if (!book) return null;
+      return {
+        id: row.id,
+        rating: row.rating,
+        body: row.body,
+        bookTitle: book.title,
+        reviewerName: profile?.username || profile?.display_name || 'A Reader'
+      };
+    })
+    .filter((r): r is RecentReview => r !== null);
+}
+
 export async function listMyReviews(readerId: string): Promise<MyReviewWithBook[]> {
   const { data, error } = await supabase
     .from('reviews')

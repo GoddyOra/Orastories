@@ -66,63 +66,8 @@
   <main class="pt-20 max-w-4xl mx-auto px-3 sm:px-4 md:px-6 py-16">
     <h1 class="text-3xl font-['Playfair Display'] font-bold mb-12 text-center dark:text-white">Reader Reviews</h1>
     
-    <div class="space-y-8">
-      <!-- Review Card -->
-      <div class="border-l-4 border-amber-700 dark:border-amber-400 bg-white dark:bg-gray-900 p-6 rounded transition-all duration-300">
-        <div class="flex justify-between items-start mb-4">
-          <div>
-            <h3 class="text-xl font-bold dark:text-white">Unforgettable Journey</h3>
-            <p class="text-sm text-gray-600 dark:text-gray-400">Sarah M.</p>
-            <p class="text-xs uppercase tracking-[0.12em] text-amber-700 dark:text-amber-400 mt-1">Book: Lust and Lies</p>
-          </div>
-          <div class="text-amber-700 dark:text-amber-400">★★★★★</div>
-        </div>
-        <p class="text-gray-700 dark:text-gray-300 leading-relaxed">
-          This book completely captured my imagination from the first page. The characters are so well-developed and the plot keeps you guessing until the very end. I couldn't put it down!
-        </p>
-      </div>
-
-      <div class="border-l-4 border-amber-700 dark:border-amber-400 bg-white dark:bg-gray-900 p-6 rounded transition-all duration-300">
-        <div class="flex justify-between items-start mb-4">
-          <div>
-            <h3 class="text-xl font-bold dark:text-white">A True Masterpiece</h3>
-            <p class="text-sm text-gray-600 dark:text-gray-400">James T.</p>
-            <p class="text-xs uppercase tracking-[0.12em] text-amber-700 dark:text-amber-400 mt-1">Book: Mile High Club</p>
-          </div>
-          <div class="text-amber-700 dark:text-amber-400">★★★★★</div>
-        </div>
-        <p class="text-gray-700 dark:text-gray-300 leading-relaxed">
-          The writing is exquisite. Every paragraph is crafted with such care and attention to detail. This author has a gift for weaving profound themes into an engaging narrative.
-        </p>
-      </div>
-
-      <div class="border-l-4 border-amber-700 dark:border-amber-400 bg-white dark:bg-gray-900 p-6 rounded transition-all duration-300">
-        <div class="flex justify-between items-start mb-4">
-          <div>
-            <h3 class="text-xl font-bold dark:text-white">Emotionally Resonant</h3>
-            <p class="text-sm text-gray-600 dark:text-gray-400">Emma R.</p>
-            <p class="text-xs uppercase tracking-[0.12em] text-amber-700 dark:text-amber-400 mt-1">Book: Lust and Lies</p>
-          </div>
-          <div class="text-amber-700 dark:text-amber-400">★★★★★</div>
-        </div>
-        <p class="text-gray-700 dark:text-gray-300 leading-relaxed">
-          I found myself deeply connected to the protagonist's journey. The exploration of human emotions felt so authentic and real. This is the kind of book that stays with you long after you've finished it.
-        </p>
-      </div>
-
-      <div class="border-l-4 border-amber-700 dark:border-amber-400 bg-white dark:bg-gray-900 p-6 rounded transition-all duration-300">
-        <div class="flex justify-between items-start mb-4">
-          <div>
-            <h3 class="text-xl font-bold dark:text-white">Highly Recommended</h3>
-            <p class="text-sm text-gray-600 dark:text-gray-400">Michael K.</p>
-            <p class="text-xs uppercase tracking-[0.12em] text-amber-700 dark:text-amber-400 mt-1">Book: Mile High Club</p>
-          </div>
-          <div class="text-amber-700 dark:text-amber-400">★★★★☆</div>
-        </div>
-        <p class="text-gray-700 dark:text-gray-300 leading-relaxed">
-          A captivating read that explores complex themes with nuance and grace. If you enjoy thoughtful, character-driven stories, this is definitely worth your time.
-        </p>
-      </div>
+    <div id="reviewsList" class="space-y-8">
+      <p class="text-center text-sm uppercase tracking-[0.3em] text-gray-400 dark:text-gray-600">Loading reviews...</p>
     </div>
   </main>
 
@@ -148,7 +93,7 @@
     themeToggle.addEventListener('click', () => {
       const isDark = reviewsBody.classList.toggle('dark-mode');
       localStorage.setItem('darkMode', isDark);
-      
+
       if (isDark) {
         reviewsBody.style.backgroundColor = '#0f0f0f';
         reviewsBody.style.color = '#e0e0e0';
@@ -161,6 +106,103 @@
         moonIcon.style.display = 'block';
       }
     });
+  </script>
+  <script type="module">
+    const SUPABASE_URL = 'https://spordcubtugawsyelqxz.supabase.co';
+    const SUPABASE_ANON_KEY =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNwb3JkY3VidHVnYXdzeWVscXh6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxMTQ0MTMsImV4cCI6MjEwMTY5MDQxM30.jQhzR_pTDIFpaJDfBmxn0-9gFovxNRZEt4nfy20uNbg';
+
+    const reviewsList = document.getElementById('reviewsList');
+
+    (async () => {
+      let supabase;
+      try {
+        const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+        supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      } catch (error) {
+        console.error('Orastories reviews: failed to load Supabase client', error);
+        reviewsList.innerHTML =
+          '<p class="text-center text-sm text-red-500">Unable to load reviews right now. Please try again.</p>';
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('reviews')
+        .select('id,rating,body,books(title),profiles(username,display_name)')
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (error) {
+        console.error('Failed to load reviews:', error);
+        reviewsList.innerHTML =
+          '<p class="text-center text-sm text-red-500">Unable to load reviews right now. Please try again.</p>';
+        return;
+      }
+
+      const reviews = (data || [])
+        .map((row) => {
+          const book = Array.isArray(row.books) ? row.books[0] : row.books;
+          const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+          if (!book) return null;
+          return {
+            rating: row.rating,
+            body: row.body,
+            bookTitle: book.title,
+            reviewerName: (profile && (profile.username || profile.display_name)) || 'A Reader'
+          };
+        })
+        .filter(Boolean);
+
+      if (reviews.length === 0) {
+        reviewsList.innerHTML =
+          '<p class="text-center text-sm text-gray-500 dark:text-gray-400">No reviews yet — be the first to leave one after reading a book.</p>';
+        return;
+      }
+
+      reviewsList.innerHTML = '';
+      reviews.forEach((review) => {
+        // Book title, reviewer name, and body are all user-submitted (creator
+        // metadata / reader-chosen usernames / free-text review bodies) and
+        // rendered on a public page for every visitor - built via DOM APIs
+        // with textContent rather than innerHTML so none of it can execute
+        // as markup.
+        const stars = '★'.repeat(review.rating) + '☆'.repeat(5 - review.rating);
+
+        const card = document.createElement('div');
+        card.className =
+          'border-l-4 border-amber-700 dark:border-amber-400 bg-white dark:bg-gray-900 p-6 rounded transition-all duration-300';
+
+        const header = document.createElement('div');
+        header.className = 'flex justify-between items-start mb-4';
+
+        const titleBlock = document.createElement('div');
+        const title = document.createElement('h3');
+        title.className = 'text-xl font-bold dark:text-white';
+        title.textContent = review.bookTitle;
+        const name = document.createElement('p');
+        name.className = 'text-sm text-gray-600 dark:text-gray-400';
+        name.textContent = review.reviewerName;
+        titleBlock.appendChild(title);
+        titleBlock.appendChild(name);
+
+        const starEl = document.createElement('div');
+        starEl.className = 'text-amber-700 dark:text-amber-400';
+        starEl.textContent = stars;
+
+        header.appendChild(titleBlock);
+        header.appendChild(starEl);
+        card.appendChild(header);
+
+        if (review.body) {
+          const body = document.createElement('p');
+          body.className = 'text-gray-700 dark:text-gray-300 leading-relaxed';
+          body.textContent = review.body;
+          card.appendChild(body);
+        }
+
+        reviewsList.appendChild(card);
+      });
+    })();
   </script>
   <script type="module" src="scripts/navigation.js"></script>
 </body>

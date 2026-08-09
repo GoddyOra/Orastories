@@ -296,18 +296,52 @@ function showToast(message, isError) {
       card.className =
         'h-full flex flex-col border border-gray-200 dark:border-white/10 rounded-lg p-6 hover:shadow-lg dark:hover:shadow-amber-400/20 transition-all duration-300 bg-white dark:bg-gray-900';
 
-      card.innerHTML =
-        '<div class="aspect-[2/3] overflow-hidden rounded mb-4 bg-gray-100 dark:bg-gray-800">' +
-        '<img src="' + book.cover + '" alt="' + book.title + ' cover" class="w-full h-full object-cover" loading="lazy" width="400" height="600" />' +
-        '</div>' +
-        '<h3 class="text-2xl font-bold mb-1 dark:text-white" style="font-family: &quot;Playfair Display&quot;, serif;">' + book.title + '</h3>' +
-        '<p class="text-sm text-gray-600 dark:text-gray-400 mb-2">' + book.author + ' • ' + (book.published_date || '') + '</p>' +
-        '<p class="text-[11px] uppercase tracking-[0.2em] text-amber-700 dark:text-amber-400 mb-3">' + (book.genre || '') + '</p>' +
-        '<p class="text-gray-700 dark:text-gray-300 mb-6 leading-relaxed text-sm flex-1">' + (book.synopsis || '') + '</p>' +
-        '<div class="mt-auto flex flex-col gap-3">' +
+      // Cover/title/author/genre/synopsis are all creator-submitted and
+      // rendered on a public page for every visitor, so the user-controlled
+      // parts are built via DOM APIs (src/alt/textContent) rather than
+      // innerHTML string concatenation - only the static button label and
+      // ctaMarkup()'s output (book.id is always a machine-generated slug,
+      // never free text) go through innerHTML.
+      const coverWrap = document.createElement('div');
+      coverWrap.className = 'aspect-[2/3] overflow-hidden rounded mb-4 bg-gray-100 dark:bg-gray-800';
+      const coverImg = document.createElement('img');
+      coverImg.src = book.cover;
+      coverImg.alt = book.title + ' cover';
+      coverImg.className = 'w-full h-full object-cover';
+      coverImg.loading = 'lazy';
+      coverImg.width = 400;
+      coverImg.height = 600;
+      coverWrap.appendChild(coverImg);
+
+      const titleEl = document.createElement('h3');
+      titleEl.className = 'text-2xl font-bold mb-1 dark:text-white';
+      titleEl.style.fontFamily = '"Playfair Display", serif';
+      titleEl.textContent = book.title;
+
+      const bylineEl = document.createElement('p');
+      bylineEl.className = 'text-sm text-gray-600 dark:text-gray-400 mb-2';
+      bylineEl.textContent = book.author + ' • ' + (book.published_date || '');
+
+      const genreEl = document.createElement('p');
+      genreEl.className = 'text-[11px] uppercase tracking-[0.2em] text-amber-700 dark:text-amber-400 mb-3';
+      genreEl.textContent = book.genre || '';
+
+      const synopsisEl = document.createElement('p');
+      synopsisEl.className = 'text-gray-700 dark:text-gray-300 mb-6 leading-relaxed text-sm flex-1';
+      synopsisEl.textContent = book.synopsis || '';
+
+      const actions = document.createElement('div');
+      actions.className = 'mt-auto flex flex-col gap-3';
+      actions.innerHTML =
         '<button type="button" class="preview-btn w-full py-2 border border-amber-700 dark:border-amber-400 text-amber-700 dark:text-amber-400 rounded hover:bg-amber-700 hover:text-white dark:hover:bg-amber-400 dark:hover:text-black transition-all text-xs uppercase tracking-[0.2em] font-semibold">Preview Chapter 1</button>' +
-        '<div class="cta-slot">' + ctaMarkup(book) + '</div>' +
-        '</div>';
+        '<div class="cta-slot">' + ctaMarkup(book) + '</div>';
+
+      card.appendChild(coverWrap);
+      card.appendChild(titleEl);
+      card.appendChild(bylineEl);
+      card.appendChild(genreEl);
+      card.appendChild(synopsisEl);
+      card.appendChild(actions);
 
       wireCta(card.querySelector('.cta-slot'), book);
 
