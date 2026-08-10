@@ -9,6 +9,7 @@ export interface BookCatalogItem {
   synopsis: string;
   genre: string;
   publishedDate: string;
+  creatorUsername: string | null;
   loadBook: () => Promise<Book>;
 }
 
@@ -47,20 +48,24 @@ export async function loadBookById(bookId: string): Promise<Book> {
 export async function fetchBookCatalog(): Promise<BookCatalogItem[]> {
   const { data, error } = await supabase
     .from('books')
-    .select('id,title,author,cover,genre,synopsis,published_date')
+    .select('id,title,author,cover,genre,synopsis,published_date,profiles(username)')
     .eq('is_published', true)
     .order('created_at', { ascending: true });
 
   if (error) throw error;
 
-  return (data ?? []).map((row) => ({
-    id: row.id,
-    title: row.title,
-    author: row.author,
-    cover: row.cover ?? '',
-    genre: row.genre ?? '',
-    synopsis: row.synopsis ?? '',
-    publishedDate: row.published_date ?? '',
-    loadBook: () => loadBookById(row.id)
-  }));
+  return (data ?? []).map((row) => {
+    const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+    return {
+      id: row.id,
+      title: row.title,
+      author: row.author,
+      cover: row.cover ?? '',
+      genre: row.genre ?? '',
+      synopsis: row.synopsis ?? '',
+      publishedDate: row.published_date ?? '',
+      creatorUsername: profile?.username ?? null,
+      loadBook: () => loadBookById(row.id)
+    };
+  });
 }

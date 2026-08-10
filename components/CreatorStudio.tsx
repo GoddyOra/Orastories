@@ -8,11 +8,12 @@ import BookEditor from './BookEditor';
 interface CreatorStudioProps {
   theme: ThemeMode;
   creatorId: string;
+  onSelectCreator: (username: string) => void;
 }
 
 const emptyFields = { title: '', author: '', genre: '', synopsis: '', cover: '', publishedDate: '' };
 
-const CreatorStudio: React.FC<CreatorStudioProps> = ({ theme, creatorId }) => {
+const CreatorStudio: React.FC<CreatorStudioProps> = ({ theme, creatorId, onSelectCreator }) => {
   const isLight = theme !== 'dark';
   const textMuted = isLight ? 'text-gray-500' : 'text-gray-400';
   const cardCls = isLight ? 'bg-white border-black/10' : 'bg-[#161616] border-white/10';
@@ -175,6 +176,17 @@ const CreatorStudio: React.FC<CreatorStudioProps> = ({ theme, creatorId }) => {
           </>
         )}
       </div>
+
+      {profile?.username && (
+        <button
+          onClick={() => onSelectCreator(profile.username!)}
+          className={`mb-8 text-xs uppercase tracking-[0.15em] font-semibold transition-colors ${
+            isLight ? 'text-gray-500 hover:text-amber-700' : 'text-gray-400 hover:text-amber-400'
+          }`}
+        >
+          View my public profile →
+        </button>
+      )}
 
       <div className="flex items-center justify-between mb-6">
         <h2 className={`text-2xl font-['Playfair_Display'] ${isLight ? 'text-gray-900' : 'text-white'}`}>My Books</h2>

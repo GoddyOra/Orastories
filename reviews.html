@@ -128,7 +128,7 @@
 
       const { data, error } = await supabase
         .from('reviews')
-        .select('id,rating,body,books(title),profiles(username,display_name)')
+        .select('id,rating,body,books(title),profiles(username,display_name,role)')
         .order('created_at', { ascending: false })
         .limit(20);
 
@@ -148,7 +148,8 @@
             rating: row.rating,
             body: row.body,
             bookTitle: book.title,
-            reviewerName: (profile && (profile.username || profile.display_name)) || 'A Reader'
+            reviewerName: (profile && (profile.username || profile.display_name)) || 'A Reader',
+            reviewerUsername: profile && profile.role === 'creator' ? profile.username : null
           };
         })
         .filter(Boolean);
@@ -179,8 +180,15 @@
         const title = document.createElement('h3');
         title.className = 'text-xl font-bold dark:text-white';
         title.textContent = review.bookTitle;
-        const name = document.createElement('p');
-        name.className = 'text-sm text-gray-600 dark:text-gray-400';
+        let name;
+        if (review.reviewerUsername) {
+          name = document.createElement('a');
+          name.href = 'index.html?creator=' + encodeURIComponent(review.reviewerUsername);
+          name.className = 'text-sm text-gray-600 dark:text-gray-400 hover:text-amber-700 dark:hover:text-amber-400 transition-colors';
+        } else {
+          name = document.createElement('p');
+          name.className = 'text-sm text-gray-600 dark:text-gray-400';
+        }
         name.textContent = review.reviewerName;
         titleBlock.appendChild(title);
         titleBlock.appendChild(name);

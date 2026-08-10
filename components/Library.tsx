@@ -2,31 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { ThemeMode } from '../types';
 import { BookCatalogItem, fetchBookCatalog } from '../constants';
 import { BookRatingSummary, getBookRatings } from '../lib/reviews';
+import BookCard from './BookCard';
 
 interface LibraryProps {
   onSelectBook: (book: BookCatalogItem) => void;
+  onSelectCreator: (username: string) => void;
   theme: ThemeMode;
 }
 
-// Unsplash serves whatever width is requested - the source URLs stored in
-// Supabase default to a much larger width than a book cover ever renders at
-// in this grid, so covers are re-requested at a size close to their actual
-// display size (max-w-sm card, 2/3 aspect ratio, up to 3 columns @2x retina).
-const getCoverSrc = (url: string) => {
-  if (!url.includes('images.unsplash.com')) return url;
-  try {
-    const parsed = new URL(url);
-    parsed.searchParams.set('w', '750');
-    parsed.searchParams.set('q', '70');
-    parsed.searchParams.set('auto', 'format');
-    parsed.searchParams.set('fit', 'crop');
-    return parsed.toString();
-  } catch {
-    return url;
-  }
-};
-
-const Library: React.FC<LibraryProps> = ({ onSelectBook, theme }) => {
+const Library: React.FC<LibraryProps> = ({ onSelectBook, onSelectCreator, theme }) => {
   const isLight = theme === 'light';
   const [books, setBooks] = useState<BookCatalogItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -106,54 +90,15 @@ const Library: React.FC<LibraryProps> = ({ onSelectBook, theme }) => {
 
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-12 sm:gap-16 md:gap-20 lg:gap-24 justify-items-center">
         {books.map((book, index) => (
-          <div 
+          <BookCard
             key={book.id}
-            className="group relative cursor-pointer w-full max-w-sm"
-            onClick={() => onSelectBook(book)}
-          >
-            {/* Elegant Book Cover */}
-            <div className={`relative aspect-[2/3] overflow-hidden rounded-sm transition-all duration-700 group-hover:-translate-y-6 ${isLight ? 'shadow-[0_20px_40px_rgba(0,0,0,0.1)] group-hover:shadow-[0_40px_60px_rgba(0,0,0,0.15)]' : 'shadow-[0_20px_50px_rgba(0,0,0,0.8)] group-hover:shadow-[0_40px_80px_rgba(212,175,55,0.15)]'}`}>
-              <img
-                src={getCoverSrc(book.cover)}
-                alt={book.title}
-                width={500}
-                height={750}
-                loading={index === 0 ? 'eager' : 'lazy'}
-                fetchPriority={index === 0 ? 'high' : undefined}
-                className="w-full h-full object-cover grayscale-[0.2] transition-all duration-1000 group-hover:scale-105 group-hover:grayscale-0"
-              />
-              {/* Synopsis Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col justify-end p-6 sm:p-8 md:p-10">
-                <p className="text-[#d4af37] text-[10px] mb-3 tracking-[0.3em] uppercase font-bold">{book.genre}</p>
-                <p className="text-2xl md:text-3xl font-['Playfair_Display'] mb-4 italic leading-tight text-white">{book.title}</p>
-                <p className="text-sm text-gray-300 line-clamp-3 font-light leading-relaxed mb-8">
-                  {book.synopsis}
-                </p>
-                <div className="w-fit border-b border-[#d4af37] pb-1 text-[#d4af37] text-[10px] uppercase tracking-[0.4em] hover:text-white hover:border-white transition-all">
-                  Begin Reading
-                </div>
-              </div>
-            </div>
-            
-            <div className="mt-8 sm:mt-10 text-center">
-              <h2 className={`text-xl sm:text-2xl font-['Playfair_Display'] tracking-wide transition-colors ${isLight ? 'text-gray-900 group-hover:text-gray-600' : 'text-white group-hover:text-[#d4af37]'}`}>
-                {book.title}
-              </h2>
-              <p className="text-gray-500 text-[10px] mt-3 uppercase tracking-[0.3em] font-medium">
-                {book.author} — {book.publishedDate}
-              </p>
-              {ratings[book.id] && (
-                <p className={`text-xs mt-3 tracking-wide ${isLight ? 'text-gray-600' : 'text-gray-400'}`}>
-                  <span className="text-amber-600">
-                    {'★'.repeat(Math.round(ratings[book.id].averageRating))}
-                    {'☆'.repeat(5 - Math.round(ratings[book.id].averageRating))}
-                  </span>{' '}
-                  {ratings[book.id].averageRating.toFixed(1)} ({ratings[book.id].reviewCount}{' '}
-                  review{ratings[book.id].reviewCount === 1 ? '' : 's'})
-                </p>
-              )}
-            </div>
-          </div>
+            book={book}
+            theme={theme}
+            rating={ratings[book.id]}
+            priority={index === 0}
+            onSelectBook={onSelectBook}
+            onSelectCreator={onSelectCreator}
+          />
         ))}
       </div>
 

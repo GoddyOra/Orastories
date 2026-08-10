@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Library from './components/Library';
 import Reader from './components/Reader';
 import Portal from './components/Portal';
+import CreatorProfile from './components/CreatorProfile';
 import NavAccountControl from './components/NavAccountControl';
 import { Book, ThemeMode } from './types';
 import { BookCatalogItem } from './constants';
@@ -11,6 +12,7 @@ const App: React.FC = () => {
   const [isLoadingBook, setIsLoadingBook] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [showPortal, setShowPortal] = useState(false);
+  const [selectedCreatorUsername, setSelectedCreatorUsername] = useState<string | null>(null);
   const [tipNotice, setTipNotice] = useState<string | null>(null);
   const loadRequestId = useRef(0);
   const [theme, setTheme] = useState<ThemeMode>(() => {
@@ -43,6 +45,18 @@ const App: React.FC = () => {
     setShowPortal(true);
     const url = new URL(window.location.href);
     url.searchParams.delete('openPortal');
+    window.history.replaceState({}, '', url.toString());
+  }, []);
+
+  // Static pages (reviews.html) can only link into the React app via a full
+  // URL, same reasoning as openPortal above - a creator's username in the
+  // query string opens their public profile directly.
+  useEffect(() => {
+    const username = new URLSearchParams(window.location.search).get('creator');
+    if (!username) return;
+    setSelectedCreatorUsername(username);
+    const url = new URL(window.location.href);
+    url.searchParams.delete('creator');
     window.history.replaceState({}, '', url.toString());
   }, []);
 
@@ -132,6 +146,12 @@ const App: React.FC = () => {
     setShowPortal(true);
   };
 
+  const handleSelectCreator = (username: string) => {
+    setSelectedBook(null);
+    setShowPortal(false);
+    setSelectedCreatorUsername(username);
+  };
+
   return (
     <div className={`min-h-screen transition-colors duration-500 ${theme === 'light' ? 'bg-[#fcfaf7] text-[#1a1a1a]' : 'bg-[#0f0f0f] text-[#e0e0e0]'}`}>
       <NavAccountControl theme={theme} onOpenPortal={handleOpenPortal} />
@@ -154,7 +174,19 @@ const App: React.FC = () => {
             />
           </div>
         ) : showPortal ? (
-          <Portal theme={theme} onSelectBook={handleSelectBook} onClose={() => setShowPortal(false)} />
+          <Portal
+            theme={theme}
+            onSelectBook={handleSelectBook}
+            onSelectCreator={handleSelectCreator}
+            onClose={() => setShowPortal(false)}
+          />
+        ) : selectedCreatorUsername ? (
+          <CreatorProfile
+            username={selectedCreatorUsername}
+            theme={theme}
+            onSelectBook={handleSelectBook}
+            onBack={() => setSelectedCreatorUsername(null)}
+          />
         ) : (
           <>
             {loadError && (
@@ -169,7 +201,7 @@ const App: React.FC = () => {
                 </div>
               </div>
             )}
-            <Library onSelectBook={handleSelectBook} theme={theme} />
+            <Library onSelectBook={handleSelectBook} onSelectCreator={handleSelectCreator} theme={theme} />
           </>
         )}
       </main>

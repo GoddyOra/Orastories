@@ -15,10 +15,11 @@ const CreatorStudio = React.lazy(() => import('./CreatorStudio'));
 interface PortalProps {
   theme: ThemeMode;
   onSelectBook: (book: BookCatalogItem) => void;
+  onSelectCreator: (username: string) => void;
   onClose: () => void;
 }
 
-const Portal: React.FC<PortalProps> = ({ theme, onSelectBook, onClose }) => {
+const Portal: React.FC<PortalProps> = ({ theme, onSelectBook, onSelectCreator, onClose }) => {
   const isLight = theme !== 'dark';
   const { user, profile, loading, signIn, signUp, signOut, refreshProfile } = useAuth();
 
@@ -332,7 +333,7 @@ const Portal: React.FC<PortalProps> = ({ theme, onSelectBook, onClose }) => {
 
             {activeTab === 'studio' && profile?.role === 'creator' ? (
               <React.Suspense fallback={<p className={`text-sm ${textMuted}`}>Loading Creator Studio...</p>}>
-                <CreatorStudio theme={theme} creatorId={user.id} />
+                <CreatorStudio theme={theme} creatorId={user.id} onSelectCreator={onSelectCreator} />
               </React.Suspense>
             ) : dashboardLoading ? (
               <p className={`text-sm ${textMuted}`}>Loading your library...</p>
