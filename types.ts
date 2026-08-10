@@ -14,6 +14,8 @@ export interface Book {
   chapters: Chapter[];
   genre: string;
   publishedDate: string;
+  priceCents: number | null; // null = not for sale, 0 = free claim, >=50 = Stripe price
+  totalChapterCount: number; // denormalized books.chapter_count - true total, unaffected by RLS
 }
 
 export type ThemeMode = 'light' | 'dark' | 'sepia';

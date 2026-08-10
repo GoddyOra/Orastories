@@ -192,6 +192,7 @@ const App: React.FC = () => {
               externalTheme={theme}
               onThemeChange={setTheme}
               onRequireSignIn={handleOpenPortal}
+              onBookUpdate={setSelectedBook}
             />
           </div>
         ) : showPortal ? (

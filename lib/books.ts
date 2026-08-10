@@ -41,7 +41,9 @@ export async function loadBookById(bookId: string): Promise<Book> {
     genre: bookRow.genre ?? '',
     publishedDate: bookRow.published_date ?? '',
     synopsis: bookRow.synopsis ?? '',
-    chapters
+    chapters,
+    priceCents: bookRow.price_cents ?? null,
+    totalChapterCount: bookRow.chapter_count ?? 0
   };
 }
 

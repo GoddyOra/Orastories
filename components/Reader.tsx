@@ -5,6 +5,8 @@ import { getBookmark, saveBookmark } from '../lib/bookmarks';
 import { getMyReview, upsertReview } from '../lib/reviews';
 import { logRead } from '../lib/reads';
 import { createTipCheckout, getBookTipEligibility } from '../lib/creatorPayments';
+import { claimFreeBook, createPurchaseCheckout } from '../lib/purchases';
+import { loadBookById } from '../lib/books';
 
 interface ReaderProps {
   book: Book;
@@ -12,6 +14,7 @@ interface ReaderProps {
   externalTheme: ThemeMode;
   onThemeChange: (theme: ThemeMode) => void;
   onRequireSignIn: () => void;
+  onBookUpdate: (book: Book) => void;
 }
 
 const getDeviceWidth = () => (typeof window === 'undefined' ? 1280 : window.innerWidth);
@@ -30,7 +33,7 @@ const getFontRange = (width: number) => {
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
-const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeChange, onRequireSignIn }) => {
+const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeChange, onRequireSignIn, onBookUpdate }) => {
   const { user, loading: authLoading } = useAuth();
   const [viewportWidth, setViewportWidth] = useState(getDeviceWidth);
   const [currentChapterIndex, setCurrentChapterIndex] = useState(0);
@@ -55,7 +58,13 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
   const [tipCustom, setTipCustom] = useState('');
   const [tipSubmitting, setTipSubmitting] = useState(false);
   const [tipError, setTipError] = useState<string | null>(null);
+  const [showContinueGate, setShowContinueGate] = useState(false);
+  const [continueSubmitting, setContinueSubmitting] = useState(false);
+  const [continueError, setContinueError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const atLoadedEdge = currentChapterIndex === book.chapters.length - 1;
+  const moreExists = book.totalChapterCount > book.chapters.length;
 
   const chapter = book.chapters[currentChapterIndex];
   const fontRange = getFontRange(viewportWidth);
@@ -201,6 +210,58 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
           console.error('Bookmark save failed:', error)
         );
       }
+    }
+  };
+
+  const handleNext = () => {
+    if (atLoadedEdge && moreExists) {
+      if (!user) {
+        onRequireSignIn();
+        return;
+      }
+      setContinueError(null);
+      setShowContinueGate(true);
+      return;
+    }
+    goToChapter(currentChapterIndex + 1);
+  };
+
+  const handleClaimFree = async () => {
+    if (!user) return;
+    setContinueError(null);
+    setContinueSubmitting(true);
+    try {
+      await claimFreeBook(book.id);
+      const freshBook = await loadBookById(book.id);
+      // Read off freshBook directly, not the stale `book` prop - it still
+      // has the old 3-chapter array in this render pass, so indexing into
+      // it here (e.g. via goToChapter) would be one chapter short.
+      const nextChapter = freshBook.chapters[currentChapterIndex + 1];
+      if (nextChapter) {
+        saveBookmark(freshBook.id, user.id, nextChapter.id).catch((error) =>
+          console.error('Bookmark save failed:', error)
+        );
+      }
+      onBookUpdate(freshBook);
+      setCurrentChapterIndex((i) => i + 1);
+      window.scrollTo(0, 0);
+      setShowContinueGate(false);
+    } catch (error) {
+      setContinueError(error instanceof Error ? error.message : 'Something went wrong. Please try again.');
+    } finally {
+      setContinueSubmitting(false);
+    }
+  };
+
+  const handleBuyToContinue = async () => {
+    setContinueError(null);
+    setContinueSubmitting(true);
+    try {
+      const url = await createPurchaseCheckout(book.id);
+      window.location.href = url;
+    } catch (error) {
+      setContinueError(error instanceof Error ? error.message : 'Something went wrong. Please try again.');
+      setContinueSubmitting(false);
     }
   };
 
@@ -560,6 +621,53 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
         </div>
       )}
 
+      {/* Continue Reading Gate */}
+      {showContinueGate && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md" onClick={() => setShowContinueGate(false)}>
+          <div
+            className="bg-[#161616] text-white p-6 sm:p-8 md:p-10 rounded-sm shadow-2xl w-full max-w-sm border border-[#d4af37]/20"
+            onClick={e => e.stopPropagation()}
+          >
+            {book.priceCents === 0 ? (
+              <>
+                <h3 className="text-xl sm:text-2xl font-['Playfair_Display'] mb-2 text-[#d4af37] italic">Continue Reading</h3>
+                <p className="text-sm text-gray-400 mb-6 sm:mb-8">
+                  You've reached the end of the free preview. Claim your free copy of this book to keep reading — $0.00, no payment required.
+                </p>
+                {continueError && <p className="text-sm text-red-500 mb-4">{continueError}</p>}
+                <button
+                  onClick={handleClaimFree}
+                  disabled={continueSubmitting}
+                  className="w-full py-4 border border-[#d4af37]/40 text-[#d4af37] text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-[#d4af37] hover:text-black transition-all disabled:opacity-40"
+                >
+                  {continueSubmitting ? 'Claiming...' : 'Claim Free Copy — $0.00'}
+                </button>
+              </>
+            ) : book.priceCents && book.priceCents >= 50 ? (
+              <>
+                <h3 className="text-xl sm:text-2xl font-['Playfair_Display'] mb-2 text-[#d4af37] italic">Continue Reading</h3>
+                <p className="text-sm text-gray-400 mb-6 sm:mb-8">
+                  You've reached the end of the free preview. Buy the full PDF edition to keep reading.
+                </p>
+                {continueError && <p className="text-sm text-red-500 mb-4">{continueError}</p>}
+                <button
+                  onClick={handleBuyToContinue}
+                  disabled={continueSubmitting}
+                  className="w-full py-4 border border-[#d4af37]/40 text-[#d4af37] text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-[#d4af37] hover:text-black transition-all disabled:opacity-40"
+                >
+                  {continueSubmitting ? 'Redirecting...' : `Buy to Continue — $${(book.priceCents / 100).toFixed(2)}`}
+                </button>
+              </>
+            ) : (
+              <>
+                <h3 className="text-xl sm:text-2xl font-['Playfair_Display'] mb-2 text-[#d4af37] italic">Continue Reading</h3>
+                <p className="text-sm text-gray-400">More chapters coming soon.</p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Main Content Area - Styled like a professional Folio Page */}
       <main className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 pt-28 sm:pt-36 md:pt-44 lg:pt-48 protected-text">
         {!resumeReady ? (
@@ -617,9 +725,9 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
             </button>
 
             <button
-              disabled={currentChapterIndex === book.chapters.length - 1}
-              onClick={() => goToChapter(currentChapterIndex + 1)}
-              className={`flex flex-col items-end gap-2 text-right transition-all ${currentChapterIndex === book.chapters.length - 1 ? 'opacity-5 pointer-events-none' : 'hover:translate-x-[8px]'}`}
+              disabled={atLoadedEdge && !moreExists}
+              onClick={handleNext}
+              className={`flex flex-col items-end gap-2 text-right transition-all ${atLoadedEdge && !moreExists ? 'opacity-5 pointer-events-none' : 'hover:translate-x-[8px]'}`}
             >
               <span className="text-[10px] uppercase tracking-[0.4em] opacity-40">Next</span>
               <span className="text-lg sm:text-xl md:text-2xl font-['Playfair_Display'] italic">Turn Page</span>

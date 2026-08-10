@@ -50,7 +50,7 @@
 
   <main class="pt-24 max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-12 md:py-16">
     <div class="text-center mb-12 md:mb-14">
-      <p class="text-sm md:text-base text-gray-700 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed">Explore all Orastories titles below, including yet-to-be-published new releases. You can preview <span class="font-semibold">Chapter 1 only</span> and purchase the full PDF edition, which comes in a more professionally styled format, to continue reading.</p>
+      <p class="text-sm md:text-base text-gray-700 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed">Explore all Orastories titles below, including yet-to-be-published new releases. You can preview <span class="font-semibold">the first 3 chapters</span> free, then either claim a free copy or purchase the full PDF edition, which comes in a more professionally styled format, to continue reading.</p>
     </div>
     <div id="booksGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 items-stretch"></div>
   </main>
@@ -59,7 +59,7 @@
     <div class="max-w-4xl h-full mx-auto bg-[#fcfaf7] dark:bg-[#111111] border border-black/10 dark:border-white/10 rounded-lg shadow-2xl flex flex-col">
       <div class="px-4 sm:px-6 py-4 border-b border-black/10 dark:border-white/10 flex items-center justify-between gap-4">
         <div>
-          <p class="text-[10px] uppercase tracking-[0.3em] text-amber-700 dark:text-amber-400">Chapter 1 Preview</p>
+          <p class="text-[10px] uppercase tracking-[0.3em] text-amber-700 dark:text-amber-400">First 3 Chapters Preview</p>
           <h2 id="modalTitle" class="text-xl sm:text-2xl font-['Playfair Display'] font-bold dark:text-white"></h2>
           <p id="modalMeta" class="text-xs text-gray-600 dark:text-gray-400 mt-1"></p>
         </div>
@@ -205,15 +205,21 @@ function showToast(message, isError) {
   }
 
   const ownedBookIds = new Set((ownedResult.data || []).map((row) => row.book_id));
-  const chapterOneCache = new Map();
+  const previewChaptersCache = new Map();
 
   function ctaMarkup(book) {
-    if (!book.price_cents) return '';
+    // price_cents === 0 is a distinct, valid "free claim" state - must be
+    // checked with == null, not truthiness, or a free book would
+    // incorrectly show no CTA at all (the same bug this file used to have).
+    if (book.price_cents == null) return '';
+    const isFree = book.price_cents === 0;
     const priceLabel = '$' + (book.price_cents / 100).toFixed(2);
 
     if (!signedIn) {
       return (
-        '<a href="index.html?openPortal=1" class="w-full py-2 border border-black/20 dark:border-white/20 rounded hover:bg-black/5 dark:hover:bg-white/5 transition-all text-xs uppercase tracking-[0.2em] font-semibold text-center block">Sign In to Purchase</a>'
+        '<a href="index.html?openPortal=1" class="w-full py-2 border border-black/20 dark:border-white/20 rounded hover:bg-black/5 dark:hover:bg-white/5 transition-all text-xs uppercase tracking-[0.2em] font-semibold text-center block">' +
+        (isFree ? 'Sign In to Claim Free Copy' : 'Sign In to Purchase') +
+        '</a>'
       );
     }
 
@@ -222,6 +228,14 @@ function showToast(message, isError) {
         '<button type="button" class="download-btn w-full py-2 border border-amber-700 dark:border-amber-400 text-amber-700 dark:text-amber-400 rounded hover:bg-amber-700 hover:text-white dark:hover:bg-amber-400 dark:hover:text-black transition-all text-xs uppercase tracking-[0.2em] font-semibold" data-book-id="' +
         book.id +
         '">Download PDF</button>'
+      );
+    }
+
+    if (isFree) {
+      return (
+        '<button type="button" class="claim-btn w-full py-2 border border-amber-700 dark:border-amber-400 text-amber-700 dark:text-amber-400 rounded hover:bg-amber-700 hover:text-white dark:hover:bg-amber-400 dark:hover:text-black transition-all text-xs uppercase tracking-[0.2em] font-semibold" data-book-id="' +
+        book.id +
+        '">Get It Free — $0.00</button>'
       );
     }
 
@@ -251,6 +265,24 @@ function showToast(message, isError) {
       });
     }
 
+    const claimBtn = container.querySelector('.claim-btn');
+    if (claimBtn) {
+      claimBtn.addEventListener('click', async () => {
+        claimBtn.disabled = true;
+        claimBtn.textContent = 'Claiming...';
+        try {
+          await invokeFn('claim-free-book', { bookId: book.id });
+          ownedBookIds.add(book.id);
+          container.innerHTML = ctaMarkup(book);
+          wireCta(container, book);
+        } catch (error) {
+          showToast(error instanceof Error ? error.message : 'Something went wrong.', true);
+          claimBtn.disabled = false;
+          claimBtn.textContent = 'Get It Free — $0.00';
+        }
+      });
+    }
+
     const downloadBtn = container.querySelector('.download-btn');
     if (downloadBtn) {
       downloadBtn.addEventListener('click', async () => {
@@ -270,17 +302,17 @@ function showToast(message, isError) {
     }
   }
 
-  async function loadChapterOne(bookId) {
-    if (chapterOneCache.has(bookId)) return chapterOneCache.get(bookId);
+  async function loadPreviewChapters(bookId) {
+    if (previewChaptersCache.has(bookId)) return previewChaptersCache.get(bookId);
     const { data, error } = await supabase
       .from('chapters')
       .select('title,content')
       .eq('book_id', bookId)
-      .eq('position', 0)
-      .maybeSingle();
+      .lt('position', 3)
+      .order('position', { ascending: true });
     if (error) throw error;
-    chapterOneCache.set(bookId, data);
-    return data;
+    previewChaptersCache.set(bookId, data || []);
+    return data || [];
   }
 
   function renderBooks() {
@@ -333,7 +365,7 @@ function showToast(message, isError) {
       const actions = document.createElement('div');
       actions.className = 'mt-auto flex flex-col gap-3';
       actions.innerHTML =
-        '<button type="button" class="preview-btn w-full py-2 border border-amber-700 dark:border-amber-400 text-amber-700 dark:text-amber-400 rounded hover:bg-amber-700 hover:text-white dark:hover:bg-amber-400 dark:hover:text-black transition-all text-xs uppercase tracking-[0.2em] font-semibold">Preview Chapter 1</button>' +
+        '<button type="button" class="preview-btn w-full py-2 border border-amber-700 dark:border-amber-400 text-amber-700 dark:text-amber-400 rounded hover:bg-amber-700 hover:text-white dark:hover:bg-amber-400 dark:hover:text-black transition-all text-xs uppercase tracking-[0.2em] font-semibold">Preview First 3 Chapters</button>' +
         '<div class="cta-slot">' + ctaMarkup(book) + '</div>';
 
       card.appendChild(coverWrap);
@@ -356,8 +388,11 @@ function showToast(message, isError) {
         document.body.style.overflow = 'hidden';
 
         try {
-          const chapter = await loadChapterOne(book.id);
-          modalContent.textContent = chapter ? chapter.content : 'No preview available for this book yet.';
+          const chapters = await loadPreviewChapters(book.id);
+          modalContent.textContent =
+            chapters.length > 0
+              ? chapters.map((c) => c.title + '\n\n' + c.content).join('\n\n\n')
+              : 'No preview available for this book yet.';
         } catch (error) {
           console.error('Failed to load chapter preview:', error);
           modalContent.textContent = 'Unable to load the preview right now. Please try again.';

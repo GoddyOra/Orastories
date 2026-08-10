@@ -32,6 +32,10 @@ export async function createPurchaseCheckout(bookId: string): Promise<string> {
   return url;
 }
 
+export async function claimFreeBook(bookId: string): Promise<void> {
+  await invoke('claim-free-book', { bookId });
+}
+
 export async function uploadBookPdf(bookId: string, file: File) {
   const { error } = await supabase.storage
     .from(PDF_BUCKET)

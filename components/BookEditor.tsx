@@ -43,7 +43,7 @@ const BookEditor: React.FC<BookEditorProps> = ({ theme, book, onBack, onChange }
   const [savingMeta, setSavingMeta] = useState(false);
   const [metaSaved, setMetaSaved] = useState(false);
 
-  const [priceInput, setPriceInput] = useState(book.priceCents ? (book.priceCents / 100).toFixed(2) : '');
+  const [priceInput, setPriceInput] = useState(book.priceCents != null ? (book.priceCents / 100).toFixed(2) : '');
   const [savingPrice, setSavingPrice] = useState(false);
   const [priceSaved, setPriceSaved] = useState(false);
   const [priceError, setPriceError] = useState<string | null>(null);
@@ -115,8 +115,8 @@ const BookEditor: React.FC<BookEditorProps> = ({ theme, book, onBack, onChange }
     const trimmed = priceInput.trim();
     const priceCents = trimmed === '' ? null : Math.round(parseFloat(trimmed) * 100);
 
-    if (priceCents !== null && (!Number.isInteger(priceCents) || priceCents < 50)) {
-      setPriceError('Price must be at least $0.50, or left blank to keep this book not for sale.');
+    if (priceCents !== null && (!Number.isInteger(priceCents) || (priceCents !== 0 && priceCents < 50))) {
+      setPriceError('Price must be $0.00 (free, unlocked with a free account) or at least $0.50, or left blank to keep this book not for sale.');
       return;
     }
 
@@ -299,7 +299,7 @@ const BookEditor: React.FC<BookEditorProps> = ({ theme, book, onBack, onChange }
         <div className="space-y-4">
           <div>
             <label className={`block text-[10px] uppercase tracking-[0.2em] mb-2 ${textMuted}`}>
-              Price (USD) — leave blank to keep this book not for sale
+              Price (USD) — leave blank for not for sale, enter 0 for a free claim (readers unlock the full book after signing in), or at least 0.50 for a real price
             </label>
             <input
               className={inputCls}

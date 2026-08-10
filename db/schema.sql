@@ -390,3 +390,58 @@ create policy "authors manage their own article covers" on storage.objects
 
 create policy "article covers are publicly viewable" on storage.objects
   for select using (bucket_id = 'article-covers');
+
+-- Phase G: free-claim books + tiered chapter access (first 3 chapters
+-- free, full book behind purchase-or-claim). price_cents = 0 is now a
+-- distinct, valid state: "free, claimable" - distinct from null ("not
+-- for sale") and >=50 ("real Stripe price"; 50c is Stripe's own USD
+-- charge minimum, unrelated to the free tier).
+alter table books add column if not exists chapter_count int not null default 0;
+
+alter table books drop constraint if exists books_price_cents_check;
+alter table books add constraint books_price_cents_check
+  check (price_cents is null or price_cents = 0 or price_cents >= 50);
+
+-- Denormalized because a plain count(*) against chapters would itself be
+-- filtered by the same RLS that hides chapters 4+ from non-purchasers,
+-- always reporting back "3" regardless of the book's real length. This
+-- column lives on books, which stays fully public, so it always reports
+-- the true total - same reasoning as articles.view_count in Phase F.
+create or replace function bump_book_chapter_count() returns trigger as $$
+begin
+  if tg_op = 'INSERT' then
+    update books set chapter_count = chapter_count + 1 where id = new.book_id;
+  elsif tg_op = 'DELETE' then
+    update books set chapter_count = chapter_count - 1 where id = old.book_id;
+  end if;
+  return null;
+end;
+$$ language plpgsql security definer;
+
+drop trigger if exists chapters_bump_book_chapter_count on chapters;
+create trigger chapters_bump_book_chapter_count after insert or delete on chapters
+for each row execute function bump_book_chapter_count();
+
+-- Replace the all-or-nothing chapters policy with a tiered pair. Postgres
+-- OR-combines multiple permissive `for select` policies, so a purchaser
+-- matches both: the free tier for chapters 1-3, and this one for the rest.
+drop policy if exists "chapters are publicly readable" on chapters;
+
+create policy "first three chapters are publicly readable" on chapters
+  for select using (
+    position < 3
+    and exists (select 1 from books where books.id = chapters.book_id and books.is_published = true)
+  );
+
+-- Deliberately does not check is_published - a past purchaser keeps
+-- access even if the creator later unpublishes, matching the existing
+-- "buyers download pdfs they purchased" storage policy's precedent.
+create policy "purchasers read all chapters of books they own" on chapters
+  for select using (
+    exists (
+      select 1 from purchases
+      where purchases.book_id = chapters.book_id
+        and purchases.buyer_id = auth.uid()
+        and purchases.status = 'succeeded'
+    )
+  );
