@@ -8,8 +8,7 @@
     "build:css": "tailwindcss -i ./styles/tailwind.css -o ./styles/tailwind.generated.css --minify",
     "build": "npm run build:css && vite build && node ./scripts/copy-static-pages.mjs",
     "preview": "vite preview",
-    "upload:originals": "node ./scripts/upload_originals.js",
-    "migrate:books": "tsx scripts/migrate-books-to-supabase.ts"
+    "upload:originals": "node ./scripts/upload_originals.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.500.0",
