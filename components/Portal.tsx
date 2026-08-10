@@ -11,19 +11,22 @@ import { CreatorApplication, ThemeMode } from '../types';
 // Lazy-loaded: pulls in mammoth (DOCX parsing) which meaningfully bloats
 // the bundle. Code-split so only creators who open "My Books" download it.
 const CreatorStudio = React.lazy(() => import('./CreatorStudio'));
+// Same reasoning - only loaded when a reader actually opens "My Articles".
+const ArticleStudio = React.lazy(() => import('./ArticleStudio'));
 
 interface PortalProps {
   theme: ThemeMode;
   onSelectBook: (book: BookCatalogItem) => void;
   onSelectCreator: (username: string) => void;
+  onSelectArticle: (slug: string) => void;
   onClose: () => void;
 }
 
-const Portal: React.FC<PortalProps> = ({ theme, onSelectBook, onSelectCreator, onClose }) => {
+const Portal: React.FC<PortalProps> = ({ theme, onSelectBook, onSelectCreator, onSelectArticle, onClose }) => {
   const isLight = theme !== 'dark';
   const { user, profile, loading, signIn, signUp, signOut, refreshProfile } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<'reading' | 'studio'>(() =>
+  const [activeTab, setActiveTab] = useState<'reading' | 'articles' | 'studio'>(() =>
     new URLSearchParams(window.location.search).get('stripe_return') === '1' ? 'studio' : 'reading'
   );
 
@@ -310,30 +313,42 @@ const Portal: React.FC<PortalProps> = ({ theme, onSelectBook, onSelectCreator, o
               Sign Out
             </button>
 
-            {profile?.role === 'creator' && (
-              <div className="flex gap-6 mb-10 border-b border-current">
-                <button
-                  onClick={() => setActiveTab('reading')}
-                  className={`pb-3 text-xs uppercase tracking-[0.2em] font-semibold border-b-2 transition-colors ${
-                    activeTab === 'reading' ? 'border-amber-700 text-amber-700' : `border-transparent ${textMuted} hover:text-amber-700`
-                  }`}
-                >
-                  My Reading
-                </button>
+            <div className="flex gap-6 mb-10 border-b border-current overflow-x-auto">
+              <button
+                onClick={() => setActiveTab('reading')}
+                className={`pb-3 text-xs uppercase tracking-[0.2em] font-semibold border-b-2 transition-colors whitespace-nowrap ${
+                  activeTab === 'reading' ? 'border-amber-700 text-amber-700' : `border-transparent ${textMuted} hover:text-amber-700`
+                }`}
+              >
+                My Reading
+              </button>
+              <button
+                onClick={() => setActiveTab('articles')}
+                className={`pb-3 text-xs uppercase tracking-[0.2em] font-semibold border-b-2 transition-colors whitespace-nowrap ${
+                  activeTab === 'articles' ? 'border-amber-700 text-amber-700' : `border-transparent ${textMuted} hover:text-amber-700`
+                }`}
+              >
+                My Articles
+              </button>
+              {profile?.role === 'creator' && (
                 <button
                   onClick={() => setActiveTab('studio')}
-                  className={`pb-3 text-xs uppercase tracking-[0.2em] font-semibold border-b-2 transition-colors ${
+                  className={`pb-3 text-xs uppercase tracking-[0.2em] font-semibold border-b-2 transition-colors whitespace-nowrap ${
                     activeTab === 'studio' ? 'border-amber-700 text-amber-700' : `border-transparent ${textMuted} hover:text-amber-700`
                   }`}
                 >
                   My Books
                 </button>
-              </div>
-            )}
+              )}
+            </div>
 
             {activeTab === 'studio' && profile?.role === 'creator' ? (
               <React.Suspense fallback={<p className={`text-sm ${textMuted}`}>Loading Creator Studio...</p>}>
                 <CreatorStudio theme={theme} creatorId={user.id} onSelectCreator={onSelectCreator} />
+              </React.Suspense>
+            ) : activeTab === 'articles' ? (
+              <React.Suspense fallback={<p className={`text-sm ${textMuted}`}>Loading Article Studio...</p>}>
+                <ArticleStudio theme={theme} authorId={user.id} onSelectArticle={onSelectArticle} />
               </React.Suspense>
             ) : dashboardLoading ? (
               <p className={`text-sm ${textMuted}`}>Loading your library...</p>

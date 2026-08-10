@@ -256,3 +256,137 @@ create policy "buyers download pdfs they purchased" on storage.objects
         and purchases.status = 'succeeded'
     )
   );
+
+-- Blog articles: unlike books, authorship has no role gate at all - any
+-- signed-up user can publish. Ranked by view_count/avg-rating "relevance"
+-- by default, computed client-side (fetch-all-and-reduce, same pattern as
+-- book ratings) rather than a DB aggregate, since the dataset is small.
+create table articles (
+  id uuid primary key default gen_random_uuid(),
+  slug text unique not null,
+  author_id uuid not null references profiles(id) on delete cascade,
+  title text not null,
+  body text not null,               -- lightweight markup (bold/italic/heading/quote/[img]), never raw HTML
+  cover_image_url text,
+  cover_image_alt text,              -- title + keywords, for image-search SEO
+  keywords text[] not null check (array_length(keywords, 1) between 3 and 5),
+  view_count int not null default 0,
+  is_published boolean not null default true,   -- author's own publish/unpublish toggle
+  removed_reason text,               -- null | 'flagged_auto' | 'flagged_manual' - owner/trigger only
+  removed_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table article_ratings (
+  id uuid primary key default gen_random_uuid(),
+  article_id uuid not null references articles(id) on delete cascade,
+  reader_id uuid not null references profiles(id) on delete cascade,
+  rating int not null check (rating between 1 and 5),
+  created_at timestamptz not null default now(),
+  unique (article_id, reader_id)
+);
+
+-- No select policy at all (see below) - flags are visible only via the
+-- dashboard, never to other users or the flagged author. unique(article_id,
+-- flagger_id) closes the "flag your own target 10x" loophole against the
+-- 10-flags-in-5-days auto-removal trigger.
+create table article_flags (
+  id uuid primary key default gen_random_uuid(),
+  article_id uuid not null references articles(id) on delete cascade,
+  flagger_id uuid not null references profiles(id) on delete cascade,
+  reason text,
+  created_at timestamptz not null default now(),
+  unique (article_id, flagger_id)
+);
+
+-- One row per (article, viewer, day) so view_count (bumped by the trigger
+-- below) can't be inflated by refresh-spamming. viewer_key is the reader's
+-- id as text when signed in, or a browser-local anonymous id for guests.
+create table article_views (
+  article_id uuid not null references articles(id) on delete cascade,
+  viewer_key text not null,
+  viewed_date date not null default current_date,
+  primary key (article_id, viewer_key, viewed_date)
+);
+
+create function bump_article_view_count() returns trigger as $$
+begin
+  update articles set view_count = view_count + 1 where id = new.article_id;
+  return new;
+end;
+$$ language plpgsql security definer;
+
+create trigger article_views_bump after insert on article_views
+for each row execute function bump_article_view_count();
+
+-- The auto-removal safety valve: fires on every new flag, checks the
+-- rolling 5-day window, and flips is_published itself via security definer
+-- (flaggers only ever get INSERT on article_flags, never UPDATE on
+-- articles - this trigger is the one exception, scoped to exactly this).
+create function check_article_flag_threshold() returns trigger as $$
+declare
+  recent_count int;
+begin
+  select count(*) into recent_count from article_flags
+  where article_id = new.article_id and created_at >= now() - interval '5 days';
+
+  if recent_count >= 10 then
+    update articles set is_published = false, removed_reason = 'flagged_auto', removed_at = now()
+    where id = new.article_id and is_published = true;
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer;
+
+create trigger article_flag_threshold after insert on article_flags
+for each row execute function check_article_flag_threshold();
+
+alter table articles enable row level security;
+alter table article_ratings enable row level security;
+alter table article_flags enable row level security;
+alter table article_views enable row level security;
+
+create policy "published articles are publicly readable" on articles
+  for select using (is_published = true);
+create policy "authors see their own articles including unpublished" on articles
+  for select using (auth.uid() = author_id);
+create policy "any signed-in user creates their own articles" on articles
+  for insert with check (auth.uid() = author_id);
+create policy "authors update their own articles" on articles
+  for update using (auth.uid() = author_id) with check (auth.uid() = author_id);
+-- Column-level lock, same pattern as profiles.role: authors can edit their
+-- own content/metadata/publish-toggle, but never removed_reason/removed_at.
+revoke update on articles from authenticated;
+grant update (title, body, cover_image_url, cover_image_alt, keywords, is_published, updated_at) on articles to authenticated;
+
+create policy "article ratings are publicly readable" on article_ratings for select using (true);
+create policy "readers rate articles as themselves" on article_ratings
+  for all using (auth.uid() = reader_id) with check (auth.uid() = reader_id);
+
+create policy "signed-in users flag articles as themselves" on article_flags
+  for insert with check (auth.uid() = flagger_id);
+
+-- Explicit grant needed alongside the policy: article_views has no select
+-- policy (view logs shouldn't be publicly queryable), and without this
+-- grant anon/authenticated inserts are rejected before the policy is even
+-- evaluated.
+grant insert on article_views to anon, authenticated;
+create policy "anyone logs an article view" on article_views
+  for insert to anon, authenticated with check (true);
+
+insert into storage.buckets (id, name, public)
+values ('article-covers', 'article-covers', true)
+on conflict (id) do nothing;
+
+create policy "authors manage their own article covers" on storage.objects
+  for all using (
+    bucket_id = 'article-covers'
+    and exists (select 1 from articles where articles.id::text = (storage.foldername(name))[1] and articles.author_id = auth.uid())
+  ) with check (
+    bucket_id = 'article-covers'
+    and exists (select 1 from articles where articles.id::text = (storage.foldername(name))[1] and articles.author_id = auth.uid())
+  );
+
+create policy "article covers are publicly viewable" on storage.objects
+  for select using (bucket_id = 'article-covers');

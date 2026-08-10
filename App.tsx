@@ -3,6 +3,7 @@ import Library from './components/Library';
 import Reader from './components/Reader';
 import Portal from './components/Portal';
 import CreatorProfile from './components/CreatorProfile';
+import ArticleReader from './components/ArticleReader';
 import NavAccountControl from './components/NavAccountControl';
 import { Book, ThemeMode } from './types';
 import { BookCatalogItem } from './constants';
@@ -13,6 +14,7 @@ const App: React.FC = () => {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [showPortal, setShowPortal] = useState(false);
   const [selectedCreatorUsername, setSelectedCreatorUsername] = useState<string | null>(null);
+  const [selectedArticleSlug, setSelectedArticleSlug] = useState<string | null>(null);
   const [tipNotice, setTipNotice] = useState<string | null>(null);
   const loadRequestId = useRef(0);
   const [theme, setTheme] = useState<ThemeMode>(() => {
@@ -57,6 +59,17 @@ const App: React.FC = () => {
     setSelectedCreatorUsername(username);
     const url = new URL(window.location.href);
     url.searchParams.delete('creator');
+    window.history.replaceState({}, '', url.toString());
+  }, []);
+
+  // blog.html can only link into the React app via a full URL, same
+  // reasoning as openPortal/creator above.
+  useEffect(() => {
+    const slug = new URLSearchParams(window.location.search).get('article');
+    if (!slug) return;
+    setSelectedArticleSlug(slug);
+    const url = new URL(window.location.href);
+    url.searchParams.delete('article');
     window.history.replaceState({}, '', url.toString());
   }, []);
 
@@ -149,7 +162,15 @@ const App: React.FC = () => {
   const handleSelectCreator = (username: string) => {
     setSelectedBook(null);
     setShowPortal(false);
+    setSelectedArticleSlug(null);
     setSelectedCreatorUsername(username);
+  };
+
+  const handleSelectArticle = (slug: string) => {
+    setSelectedBook(null);
+    setShowPortal(false);
+    setSelectedCreatorUsername(null);
+    setSelectedArticleSlug(slug);
   };
 
   return (
@@ -178,6 +199,7 @@ const App: React.FC = () => {
             theme={theme}
             onSelectBook={handleSelectBook}
             onSelectCreator={handleSelectCreator}
+            onSelectArticle={handleSelectArticle}
             onClose={() => setShowPortal(false)}
           />
         ) : selectedCreatorUsername ? (
@@ -186,6 +208,14 @@ const App: React.FC = () => {
             theme={theme}
             onSelectBook={handleSelectBook}
             onBack={() => setSelectedCreatorUsername(null)}
+          />
+        ) : selectedArticleSlug ? (
+          <ArticleReader
+            slug={selectedArticleSlug}
+            theme={theme}
+            onBack={() => setSelectedArticleSlug(null)}
+            onRequireSignIn={handleOpenPortal}
+            onSelectCreator={handleSelectCreator}
           />
         ) : (
           <>

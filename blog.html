@@ -63,45 +63,13 @@
     </div>
   </nav>
 
-  <main class="pt-20 max-w-4xl mx-auto px-3 sm:px-4 md:px-6 py-16">
-    <h1 class="text-3xl font-['Playfair Display'] font-bold mb-12 text-center dark:text-white">Articles by Goddy Ora</h1>
-    
-    <div class="space-y-12">
-      <article class="border-b border-gray-200 dark:border-white/10 pb-12">
-        <h2 class="text-3xl font-['Playfair Display'] font-bold mb-2 dark:text-white">Python SyntaxError: Unexpected EOF While Parsing - Solution Guide</h2>
-        <div class="text-sm text-gray-600 dark:text-gray-400 mb-4">Published on March 2, 2026</div>
-        <p class="text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
-          A practical debugging walkthrough for one of Python's most common parser errors, including real examples and screenshot-based fixes.
-        </p>
-        <a href="blog-python-syntaxerror-unexpected-eof-guide-2026.html" class="text-amber-700 dark:text-amber-400 hover:underline">Read Full Article →</a>
-      </article>
+  <main class="pt-20 max-w-5xl mx-auto px-3 sm:px-4 md:px-6 py-16">
+    <h1 class="text-3xl font-['Playfair Display'] font-bold mb-8 text-center dark:text-white">The Orastories Blog</h1>
 
-      <article class="border-b border-gray-200 dark:border-white/10 pb-12">
-        <h2 class="text-3xl font-['Playfair Display'] font-bold mb-2 dark:text-white">Writing 101: How to Start Your Career as a Profitable Writer</h2>
-        <div class="text-sm text-gray-600 dark:text-gray-400 mb-4">Published on February 18, 2026</div>
-        <p class="text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
-          A direct guide for new writers on audience targeting, launch strategy, monetization, and the business systems required to earn consistently.
-        </p>
-        <a href="blog-writing-101-profitable-writer-2026.html" class="text-amber-700 dark:text-amber-400 hover:underline">Read Full Article →</a>
-      </article>
+    <div id="sortControls" class="flex flex-wrap justify-center gap-2 mb-12"></div>
 
-      <article class="border-b border-gray-200 dark:border-white/10 pb-12">
-        <h2 class="text-3xl font-['Playfair Display'] font-bold mb-2 dark:text-white">Creating the Perfect Food Menu for Your Pet Dog</h2>
-        <div class="text-sm text-gray-600 dark:text-gray-400 mb-4">Published on January 14, 2026</div>
-        <p class="text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
-          A practical feeding guide covering diet types, safe and unsafe foods, and portion planning by life stage for healthier pet care.
-        </p>
-        <a href="blog-perfect-food-menu-pet-dog-2026.html" class="text-amber-700 dark:text-amber-400 hover:underline">Read Full Article →</a>
-      </article>
-
-      <article class="pb-12">
-        <h2 class="text-3xl font-['Playfair Display'] font-bold mb-2 dark:text-white">Best Programming Language to Learn in 2026: A Beginner's Guide</h2>
-        <div class="text-sm text-gray-600 dark:text-gray-400 mb-4">Published on January 12, 2026</div>
-        <p class="text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
-          A beginner-focused map of language choices by specialization: web, desktop, mobile, game dev, systems, and AI/ML.
-        </p>
-        <a href="blog-best-programming-language-2026.html" class="text-amber-700 dark:text-amber-400 hover:underline">Read Full Article →</a>
-      </article>
+    <div id="articlesList" class="grid grid-cols-1 sm:grid-cols-2 gap-8">
+      <p class="col-span-full text-center text-sm uppercase tracking-[0.3em] text-gray-400 dark:text-gray-600">Loading articles...</p>
     </div>
   </main>
 
@@ -140,6 +108,160 @@
         moonIcon.style.display = 'block';
       }
     });
+  </script>
+  <script type="module">
+    const SUPABASE_URL = 'https://spordcubtugawsyelqxz.supabase.co';
+    const SUPABASE_ANON_KEY =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNwb3JkY3VidHVnYXdzeWVscXh6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxMTQ0MTMsImV4cCI6MjEwMTY5MDQxM30.jQhzR_pTDIFpaJDfBmxn0-9gFovxNRZEt4nfy20uNbg';
+
+    const sortControls = document.getElementById('sortControls');
+    const articlesList = document.getElementById('articlesList');
+
+    const SORTS = [
+      { key: 'relevance', label: 'Relevance' },
+      { key: 'popular', label: 'Popular' },
+      { key: 'newest', label: 'Newest' },
+      { key: 'goddyora', label: 'By Goddy Ora' }
+    ];
+
+    (async () => {
+      let supabase;
+      try {
+        const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+        supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      } catch (error) {
+        console.error('Orastories blog: failed to load Supabase client', error);
+        articlesList.innerHTML =
+          '<p class="col-span-full text-center text-sm text-red-500">Unable to load articles right now. Please try again.</p>';
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('articles')
+        .select('id,slug,title,cover_image_url,cover_image_alt,keywords,view_count,created_at,profiles(username,display_name,role),article_ratings(rating)')
+        .eq('is_published', true);
+
+      if (error) {
+        console.error('Failed to load articles:', error);
+        articlesList.innerHTML =
+          '<p class="col-span-full text-center text-sm text-red-500">Unable to load articles right now. Please try again.</p>';
+        return;
+      }
+
+      const articles = (data || []).map((row) => {
+        const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+        const ratings = (row.article_ratings || []).map((r) => r.rating);
+        const ratingCount = ratings.length;
+        const averageRating = ratingCount > 0 ? ratings.reduce((a, b) => a + b, 0) / ratingCount : null;
+        return {
+          slug: row.slug,
+          title: row.title,
+          coverImageUrl: row.cover_image_url,
+          coverImageAlt: row.cover_image_alt,
+          viewCount: row.view_count,
+          createdAt: row.created_at,
+          authorUsername: profile ? profile.username : null,
+          authorName: profile ? profile.display_name || profile.username : 'A Reader',
+          authorIsCreator: profile ? profile.role === 'creator' : false,
+          averageRating,
+          ratingCount
+        };
+      });
+
+      let currentSort = 'relevance';
+
+      function renderSortControls() {
+        sortControls.innerHTML = '';
+        SORTS.forEach((s) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          const active = currentSort === s.key;
+          btn.className =
+            'px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] border rounded-full transition-all ' +
+            (active
+              ? 'bg-amber-700 border-amber-700 text-white dark:bg-amber-600 dark:border-amber-600'
+              : 'border-black/15 dark:border-white/15 hover:bg-black/5 dark:hover:bg-white/10');
+          btn.textContent = s.label;
+          btn.addEventListener('click', () => {
+            currentSort = s.key;
+            renderSortControls();
+            renderArticles();
+          });
+          sortControls.appendChild(btn);
+        });
+      }
+
+      function renderArticles() {
+        let list = articles;
+        let sortKey = currentSort;
+
+        if (currentSort === 'goddyora') {
+          list = list.filter((a) => a.authorUsername === 'goddyora');
+          sortKey = 'newest';
+        }
+
+        list = list.slice().sort((a, b) => {
+          if (sortKey === 'newest') return new Date(b.createdAt) - new Date(a.createdAt);
+          if (sortKey === 'popular') return b.viewCount - a.viewCount;
+          const score = (x) => x.viewCount + (x.averageRating || 0) * 20;
+          return score(b) - score(a);
+        });
+
+        articlesList.innerHTML = '';
+
+        if (list.length === 0) {
+          articlesList.innerHTML = '<p class="col-span-full text-center text-sm text-gray-500 dark:text-gray-400">No articles here yet.</p>';
+          return;
+        }
+
+        list.forEach((article) => {
+          const card = document.createElement('article');
+          card.className =
+            'rounded-sm border overflow-hidden transition-all duration-300 hover:shadow-lg bg-white dark:bg-[#161616] border-black/10 dark:border-white/10';
+
+          const link = document.createElement('a');
+          link.href = 'index.html?article=' + encodeURIComponent(article.slug);
+          link.className = 'block';
+
+          if (article.coverImageUrl) {
+            const imgWrap = document.createElement('div');
+            imgWrap.className = 'aspect-[16/9] overflow-hidden';
+            const img = document.createElement('img');
+            img.src = article.coverImageUrl;
+            img.alt = article.coverImageAlt || article.title;
+            img.loading = 'lazy';
+            img.className = 'w-full h-full object-cover';
+            imgWrap.appendChild(img);
+            link.appendChild(imgWrap);
+          }
+
+          const body = document.createElement('div');
+          body.className = 'p-5';
+          const title = document.createElement('h2');
+          title.className = "text-xl font-['Playfair_Display'] font-bold mb-2 dark:text-white";
+          title.textContent = article.title;
+          const meta = document.createElement('p');
+          meta.className = 'text-xs uppercase tracking-[0.15em] text-gray-500 dark:text-gray-400';
+          meta.textContent =
+            article.viewCount + ' view' + (article.viewCount === 1 ? '' : 's') +
+            (article.averageRating ? ' — ' + article.averageRating.toFixed(1) + ' ★ (' + article.ratingCount + ')' : '');
+          body.appendChild(title);
+          body.appendChild(meta);
+          link.appendChild(body);
+          card.appendChild(link);
+
+          const byline = document.createElement('p');
+          byline.className = 'px-5 pb-5 text-xs text-gray-500 dark:text-gray-400';
+          byline.textContent = 'By ' + article.authorName;
+          card.appendChild(byline);
+
+          articlesList.appendChild(card);
+        });
+      }
+
+      renderSortControls();
+      renderArticles();
+    })();
   </script>
   <script type="module" src="scripts/navigation.js"></script>
 </body>
