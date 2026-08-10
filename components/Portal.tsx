@@ -3,8 +3,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { BookCatalogItem, loadBookById } from '../constants';
 import { BookmarkedBook, listBookmarksWithBooks } from '../lib/bookmarks';
 import { listMyReviews, MyReviewWithBook } from '../lib/reviews';
-import { PurchasedBook, listMyPurchasesWithBooks, getPurchaseDownloadUrl } from '../lib/purchases';
+import { PurchasedBook, listMyPurchasesWithBooks } from '../lib/purchases';
 import { isUsernameAvailable, claimUsername, USERNAME_PATTERN } from '../lib/username';
+import { updateBio } from '../lib/auth';
 import { getMyApplication, submitCreatorApplication } from '../lib/creatorApplications';
 import { CreatorApplication, ThemeMode } from '../types';
 
@@ -42,10 +43,14 @@ const Portal: React.FC<PortalProps> = ({ theme, onSelectBook, onSelectCreator, o
   const [gateError, setGateError] = useState<string | null>(null);
   const [gateLoading, setGateLoading] = useState(false);
 
+  const [editingBio, setEditingBio] = useState(false);
+  const [bioDraft, setBioDraft] = useState('');
+  const [savingBio, setSavingBio] = useState(false);
+  const BIO_MAX = 1000;
+
   const [bookmarks, setBookmarks] = useState<BookmarkedBook[]>([]);
   const [reviews, setReviews] = useState<MyReviewWithBook[]>([]);
   const [purchases, setPurchases] = useState<PurchasedBook[]>([]);
-  const [downloadingBookId, setDownloadingBookId] = useState<string | null>(null);
   const [application, setApplication] = useState<CreatorApplication | null>(null);
   const [dashboardLoading, setDashboardLoading] = useState(false);
 
@@ -137,6 +142,19 @@ const Portal: React.FC<PortalProps> = ({ theme, onSelectBook, onSelectCreator, o
     }
   };
 
+  const handleSaveBio = async () => {
+    setSavingBio(true);
+    try {
+      await updateBio(user!.id, bioDraft);
+      await refreshProfile();
+      setEditingBio(false);
+    } catch (error) {
+      console.error('Bio save failed:', error);
+    } finally {
+      setSavingBio(false);
+    }
+  };
+
   const handleSubmitApplication = async (e: React.FormEvent) => {
     e.preventDefault();
     setApplyError(null);
@@ -162,18 +180,6 @@ const Portal: React.FC<PortalProps> = ({ theme, onSelectBook, onSelectCreator, o
       publishedDate: '',
       loadBook: () => loadBookById(bookId)
     });
-  };
-
-  const handleDownload = async (bookId: string) => {
-    setDownloadingBookId(bookId);
-    try {
-      const url = await getPurchaseDownloadUrl(bookId);
-      window.location.href = url;
-    } catch (error) {
-      console.error('Failed to get download link:', error);
-    } finally {
-      setDownloadingBookId(null);
-    }
   };
 
   const cardBg = isLight ? 'bg-white border-black/10' : 'bg-[#161616] border-white/10';
@@ -308,10 +314,60 @@ const Portal: React.FC<PortalProps> = ({ theme, onSelectBook, onSelectCreator, o
             </h1>
             <button
               onClick={() => signOut().catch((error) => console.error('Sign out failed:', error))}
-              className={`text-xs uppercase tracking-[0.2em] ${textMuted} hover:text-amber-700 mb-8`}
+              className={`text-xs uppercase tracking-[0.2em] ${textMuted} hover:text-amber-700 mb-4`}
             >
               Sign Out
             </button>
+
+            <div className="mb-8">
+              {editingBio ? (
+                <div className="space-y-2">
+                  <textarea
+                    value={bioDraft}
+                    onChange={(e) => setBioDraft(e.target.value.slice(0, BIO_MAX))}
+                    maxLength={BIO_MAX}
+                    rows={3}
+                    placeholder="A short bio other readers will see on your profile..."
+                    className={`w-full px-4 py-3 rounded-sm border text-sm focus:outline-none focus:border-amber-700 ${
+                      isLight ? 'bg-white border-black/15 text-gray-900' : 'bg-[#0f0f0f] border-white/15 text-white'
+                    }`}
+                  />
+                  <div className="flex items-center justify-between gap-4">
+                    <span className={`text-xs ${textMuted}`}>{bioDraft.length}/{BIO_MAX}</span>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => setEditingBio(false)}
+                        className={`text-xs uppercase tracking-[0.2em] ${textMuted} hover:text-amber-700`}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleSaveBio}
+                        disabled={savingBio}
+                        className="text-xs uppercase tracking-[0.2em] font-semibold text-amber-700 hover:text-amber-800 disabled:opacity-50"
+                      >
+                        {savingBio ? 'Saving...' : 'Save Bio'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-start justify-between gap-4">
+                  <p className={`text-sm ${textMuted} max-w-xl`}>
+                    {profile?.bio || 'No bio yet.'}
+                  </p>
+                  <button
+                    onClick={() => {
+                      setBioDraft(profile?.bio || '');
+                      setEditingBio(true);
+                    }}
+                    className="flex-shrink-0 text-xs uppercase tracking-[0.2em] font-semibold text-amber-700 hover:text-amber-800"
+                  >
+                    {profile?.bio ? 'Edit Bio' : 'Add Bio'}
+                  </button>
+                </div>
+              )}
+            </div>
 
             <div className="flex gap-6 mb-10 border-b border-current overflow-x-auto">
               <button
@@ -394,11 +450,10 @@ const Portal: React.FC<PortalProps> = ({ theme, onSelectBook, onSelectCreator, o
                             </div>
                           </div>
                           <button
-                            onClick={() => handleDownload(p.bookId)}
-                            disabled={downloadingBookId === p.bookId}
-                            className="flex-shrink-0 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] border border-amber-700 text-amber-700 hover:bg-amber-700 hover:text-white transition-all disabled:opacity-50"
+                            onClick={() => handleResume(p.bookId)}
+                            className="flex-shrink-0 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] border border-amber-700 text-amber-700 hover:bg-amber-700 hover:text-white transition-all"
                           >
-                            {downloadingBookId === p.bookId ? 'Preparing...' : 'Download'}
+                            Read Full Book
                           </button>
                         </div>
                       ))}

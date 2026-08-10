@@ -50,7 +50,7 @@
 
   <main class="pt-24 max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-12 md:py-16">
     <div class="text-center mb-12 md:mb-14">
-      <p class="text-sm md:text-base text-gray-700 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed">Explore all Orastories titles below, including yet-to-be-published new releases. You can preview <span class="font-semibold">the first 3 chapters</span> free, then either claim a free copy or purchase the full PDF edition, which comes in a more professionally styled format, to continue reading.</p>
+      <p class="text-sm md:text-base text-gray-700 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed">Explore all Orastories titles below, including yet-to-be-published new releases. You can preview <span class="font-semibold">the first 3 chapters</span> free, then either claim a free copy or purchase the book to unlock full access and keep reading right here on the site.</p>
     </div>
     <div id="booksGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 items-stretch"></div>
   </main>
@@ -73,7 +73,7 @@
     </div>
   </div>
 
-  <footer class="border-t border-gray-200 dark:border-white/10 mt-8 md:mt-14 py-8 text-center text-gray-600 dark:text-gray-400 transition-colors duration-500">
+  <footer class="border-t border-gray-200 dark:border-white/10 mt-16 py-8 text-center text-gray-600 dark:text-gray-400 transition-colors duration-500">
     <p>&copy; 2026 Orastories. All rights reserved.</p>
   </footer>
 
@@ -225,9 +225,7 @@ function showToast(message, isError) {
 
     if (ownedBookIds.has(book.id)) {
       return (
-        '<button type="button" class="download-btn w-full py-2 border border-amber-700 dark:border-amber-400 text-amber-700 dark:text-amber-400 rounded hover:bg-amber-700 hover:text-white dark:hover:bg-amber-400 dark:hover:text-black transition-all text-xs uppercase tracking-[0.2em] font-semibold" data-book-id="' +
-        book.id +
-        '">Download PDF</button>'
+        '<a href="index.html?openPortal=1" class="w-full py-2 border border-amber-700 dark:border-amber-400 text-amber-700 dark:text-amber-400 rounded hover:bg-amber-700 hover:text-white dark:hover:bg-amber-400 dark:hover:text-black transition-all text-xs uppercase tracking-[0.2em] font-semibold text-center block">Read Full Book</a>'
       );
     }
 
@@ -242,7 +240,7 @@ function showToast(message, isError) {
     return (
       '<button type="button" class="buy-btn w-full py-2 border border-amber-700 dark:border-amber-400 text-amber-700 dark:text-amber-400 rounded hover:bg-amber-700 hover:text-white dark:hover:bg-amber-400 dark:hover:text-black transition-all text-xs uppercase tracking-[0.2em] font-semibold" data-book-id="' +
       book.id +
-      '">Buy Full PDF — ' +
+      '">Purchase Book — ' +
       priceLabel +
       '</button>'
     );
@@ -260,7 +258,7 @@ function showToast(message, isError) {
         } catch (error) {
           showToast(error instanceof Error ? error.message : 'Something went wrong.', true);
           buyBtn.disabled = false;
-          buyBtn.textContent = 'Buy Full PDF — $' + (book.price_cents / 100).toFixed(2);
+          buyBtn.textContent = 'Purchase Book — $' + (book.price_cents / 100).toFixed(2);
         }
       });
     }
@@ -283,23 +281,6 @@ function showToast(message, isError) {
       });
     }
 
-    const downloadBtn = container.querySelector('.download-btn');
-    if (downloadBtn) {
-      downloadBtn.addEventListener('click', async () => {
-        downloadBtn.disabled = true;
-        downloadBtn.textContent = 'Preparing...';
-        try {
-          const { data, error } = await supabase.storage.from('book-pdfs').createSignedUrl(book.id + '/manuscript.pdf', 300);
-          if (error) throw error;
-          window.location.href = data.signedUrl;
-        } catch (error) {
-          showToast(error instanceof Error ? error.message : 'Unable to prepare your download.', true);
-        } finally {
-          downloadBtn.disabled = false;
-          downloadBtn.textContent = 'Download PDF';
-        }
-      });
-    }
   }
 
   async function loadPreviewChapters(bookId) {

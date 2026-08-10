@@ -49,12 +49,6 @@ export async function getBookPdfStatus(bookId: string): Promise<boolean> {
   return (data?.length ?? 0) > 0;
 }
 
-export async function getPurchaseDownloadUrl(bookId: string): Promise<string> {
-  const { data, error } = await supabase.storage.from(PDF_BUCKET).createSignedUrl(`${bookId}/manuscript.pdf`, 300);
-  if (error) throw error;
-  return data.signedUrl;
-}
-
 export interface PurchasedBook {
   bookId: string;
   title: string;

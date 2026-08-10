@@ -83,6 +83,11 @@ const CreatorProfile: React.FC<CreatorProfileProps> = ({ username, theme, onSele
               @{profile.username}
               {memberSinceYear ? ` — Member since ${memberSinceYear}` : ''}
             </p>
+            {profile.bio && (
+              <p className={`max-w-2xl mx-auto mt-6 text-sm sm:text-base leading-relaxed ${isLight ? 'text-gray-700' : 'text-gray-300'}`}>
+                {profile.bio}
+              </p>
+            )}
             <div className={`w-16 h-px mx-auto opacity-40 mt-8 ${isLight ? 'bg-gray-400' : 'bg-[#d4af37]'}`}></div>
           </header>
 

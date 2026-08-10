@@ -4,13 +4,14 @@ import { BookCatalogItem, loadBookById } from './books';
 export interface PublicCreatorProfile {
   username: string;
   displayName: string | null;
+  bio: string | null;
   memberSince: string;
 }
 
 export async function getCreatorProfile(username: string): Promise<PublicCreatorProfile | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('username, display_name, created_at')
+    .select('username, display_name, bio, created_at')
     .eq('username', username)
     .eq('role', 'creator')
     .maybeSingle();
@@ -21,6 +22,7 @@ export async function getCreatorProfile(username: string): Promise<PublicCreator
   return {
     username: data.username,
     displayName: data.display_name,
+    bio: data.bio,
     memberSince: data.created_at
   };
 }

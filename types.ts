@@ -31,6 +31,7 @@ export interface Profile {
   role: 'creator' | 'reader';
   displayName: string | null;
   username: string | null;
+  bio: string | null;
   stripePayoutsEnabled: boolean;
   createdAt: string;
 }

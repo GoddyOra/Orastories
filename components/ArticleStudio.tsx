@@ -159,8 +159,15 @@ const ArticleStudio: React.FC<ArticleStudioProps> = ({ theme, authorId, onSelect
 
         <div className={`rounded-sm border p-6 sm:p-8 space-y-5 ${cardCls}`}>
           <div>
-            <label className={`block text-[10px] uppercase tracking-[0.2em] mb-2 ${textMuted}`}>Title</label>
-            <input className={inputCls} value={fields.title} onChange={(e) => setFields({ ...fields, title: e.target.value })} />
+            <label className={`block text-[10px] uppercase tracking-[0.2em] mb-2 ${textMuted}`}>
+              Title ({fields.title.length}/150)
+            </label>
+            <input
+              className={inputCls}
+              maxLength={150}
+              value={fields.title}
+              onChange={(e) => setFields({ ...fields, title: e.target.value })}
+            />
           </div>
 
           <div>

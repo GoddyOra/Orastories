@@ -50,7 +50,7 @@ export async function ensureProfile(userId: string, rawUsername: unknown) {
 export async function fetchProfile(userId: string): Promise<Profile | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id,role,display_name,username,stripe_payouts_enabled,created_at')
+    .select('id,role,display_name,username,bio,stripe_payouts_enabled,created_at')
     .eq('id', userId)
     .maybeSingle();
 
@@ -62,7 +62,17 @@ export async function fetchProfile(userId: string): Promise<Profile | null> {
     role: data.role,
     displayName: data.display_name,
     username: data.username,
+    bio: data.bio,
     stripePayoutsEnabled: data.stripe_payouts_enabled,
     createdAt: data.created_at
   };
+}
+
+export async function updateBio(userId: string, bio: string): Promise<void> {
+  const trimmed = bio.trim();
+  const { error } = await supabase
+    .from('profiles')
+    .update({ bio: trimmed.length > 0 ? trimmed : null })
+    .eq('id', userId);
+  if (error) throw error;
 }

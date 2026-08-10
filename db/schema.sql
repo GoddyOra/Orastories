@@ -169,7 +169,7 @@ grant update (username, display_name) on profiles to authenticated;
 -- visitor via the policy above. stripe_payouts_enabled stays public since the
 -- reader-facing UI needs it to decide whether to show a book's tip button.
 revoke select on profiles from authenticated, anon;
-grant select (id, role, display_name, username, created_at, stripe_payouts_enabled) on profiles to authenticated, anon;
+grant select (id, role, display_name, username, bio, created_at, stripe_payouts_enabled) on profiles to authenticated, anon;
 
 create policy "users view their own application" on creator_applications
   for select using (auth.uid() = user_id);
@@ -445,3 +445,122 @@ create policy "purchasers read all chapters of books they own" on chapters
         and purchases.status = 'succeeded'
     )
   );
+
+-- Phase H: footer/purchase-flow UX fixes (no schema), content length
+-- standards, a profiles.bio field, and reader comments on books/articles.
+
+-- Content length standards. Generous, SEO/UX-informed hard caps (soft
+-- warnings live client-side only) - see the user's supplied table. Existing
+-- content is nowhere close to any of these (largest chapter ~58k chars,
+-- largest article body ~8k chars), so a plain `add constraint` is safe
+-- without `not valid`.
+alter table books add constraint books_title_length check (char_length(title) <= 150);
+alter table books add constraint books_synopsis_length check (synopsis is null or char_length(synopsis) <= 500);
+alter table articles add constraint articles_title_length check (char_length(title) <= 150);
+alter table articles add constraint articles_body_length check (char_length(body) <= 100000);
+alter table chapters add constraint chapters_content_length check (char_length(content) <= 100000);
+
+-- Whole-book length (sum of all chapters) can't be a plain `check` - it's a
+-- cross-row constraint. Mirrors chapter_count's denormalized-column-plus-
+-- trigger shape (Phase G): the trigger itself rejects (raises, rolling back
+-- the whole transaction) an insert/update that would push the running total
+-- past 2,000,000 chars.
+alter table books add column if not exists total_chars int not null default 0;
+
+create or replace function enforce_book_total_chars() returns trigger as $$
+declare
+  delta int;
+  new_total int;
+begin
+  if tg_op = 'INSERT' then
+    delta := char_length(new.content);
+  elsif tg_op = 'UPDATE' then
+    delta := char_length(new.content) - char_length(old.content);
+  else
+    delta := -char_length(old.content);
+  end if;
+
+  select total_chars + delta into new_total from books where id = coalesce(new.book_id, old.book_id);
+
+  if new_total > 2000000 then
+    raise exception 'This book would exceed the 2,000,000 character limit across all chapters.';
+  end if;
+
+  update books set total_chars = new_total where id = coalesce(new.book_id, old.book_id);
+  return null;
+end;
+$$ language plpgsql security definer;
+
+drop trigger if exists chapters_enforce_book_total_chars on chapters;
+create trigger chapters_enforce_book_total_chars after insert or update or delete on chapters
+for each row execute function enforce_book_total_chars();
+
+-- profiles.bio: shown on public creator profiles and (eventually) next to
+-- article/comment bylines. Same column-level-grant pattern as
+-- username/display_name - added to the existing grant, not a new policy.
+alter table profiles add column if not exists bio text;
+alter table profiles add constraint profiles_bio_length check (bio is null or char_length(bio) <= 1000);
+grant update (username, display_name, bio) on profiles to authenticated;
+
+-- Reader comments on books and articles. Same shape as reviews/
+-- article_ratings (publicly readable, own-row write) plus a flags table
+-- shaped like article_flags (insert-only, no select policy - dashboard-only
+-- visibility) but deliberately WITHOUT the 10-flags/5-days auto-removal
+-- trigger: that machinery was purpose-built for full articles, a single
+-- comment is much lower-stakes, and manual removal is proportionate.
+-- One level of nesting only (parent_comment_id), enforced client-side.
+create table book_comments (
+  id uuid primary key default gen_random_uuid(),
+  book_id text not null references books(id) on delete cascade,
+  commenter_id uuid not null references profiles(id) on delete cascade,
+  parent_comment_id uuid references book_comments(id) on delete cascade,
+  body text not null check (char_length(body) between 1 and 5000),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table article_comments (
+  id uuid primary key default gen_random_uuid(),
+  article_id uuid not null references articles(id) on delete cascade,
+  commenter_id uuid not null references profiles(id) on delete cascade,
+  parent_comment_id uuid references article_comments(id) on delete cascade,
+  body text not null check (char_length(body) between 1 and 5000),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- One shared flags table for both comment types (content_type discriminates)
+-- since flags never need to join back to the parent content's own columns.
+create table comment_flags (
+  id uuid primary key default gen_random_uuid(),
+  content_type text not null check (content_type in ('book', 'article')),
+  comment_id uuid not null,
+  flagger_id uuid not null references profiles(id) on delete cascade,
+  reason text,
+  created_at timestamptz not null default now(),
+  unique (content_type, comment_id, flagger_id)
+);
+
+alter table book_comments enable row level security;
+alter table article_comments enable row level security;
+alter table comment_flags enable row level security;
+
+create policy "book comments are publicly readable" on book_comments for select using (true);
+create policy "readers manage their own book comments" on book_comments
+  for insert with check (auth.uid() = commenter_id);
+create policy "readers update their own book comments" on book_comments
+  for update using (auth.uid() = commenter_id) with check (auth.uid() = commenter_id);
+create policy "readers delete their own book comments" on book_comments
+  for delete using (auth.uid() = commenter_id);
+
+create policy "article comments are publicly readable" on article_comments for select using (true);
+create policy "readers manage their own article comments" on article_comments
+  for insert with check (auth.uid() = commenter_id);
+create policy "readers update their own article comments" on article_comments
+  for update using (auth.uid() = commenter_id) with check (auth.uid() = commenter_id);
+create policy "readers delete their own article comments" on article_comments
+  for delete using (auth.uid() = commenter_id);
+
+create policy "signed-in users flag comments as themselves" on comment_flags
+  for insert with check (auth.uid() = flagger_id);
+-- No select policy: same reasoning as article_flags.

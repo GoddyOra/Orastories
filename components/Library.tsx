@@ -101,12 +101,6 @@ const Library: React.FC<LibraryProps> = ({ onSelectBook, onSelectCreator, theme 
           />
         ))}
       </div>
-
-      <footer className="mt-20 sm:mt-28 md:mt-40 border-t border-black/5 pt-10 sm:pt-14 md:pt-20 text-center">
-        <p className={`text-[10px] tracking-[0.4em] uppercase ${isLight ? 'text-gray-500' : 'text-gray-400'}`}>
-          &copy; {new Date().getFullYear()} Goddy Ora Archives. All stories are property of the author.
-        </p>
-      </footer>
     </div>
   );
 };

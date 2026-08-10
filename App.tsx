@@ -5,6 +5,7 @@ import Portal from './components/Portal';
 import CreatorProfile from './components/CreatorProfile';
 import ArticleReader from './components/ArticleReader';
 import NavAccountControl from './components/NavAccountControl';
+import Footer from './components/Footer';
 import { Book, ThemeMode } from './types';
 import { BookCatalogItem } from './constants';
 
@@ -236,6 +237,11 @@ const App: React.FC = () => {
           </>
         )}
       </main>
+
+      {/* Reader.tsx runs its own independent theme system (dark/light/sepia)
+          and full-bleed layout - an app-level footer directly beneath it
+          would visually clash, so it's the one view that skips this. */}
+      {!selectedBook && <Footer theme={theme} />}
 
       <style>{`
         @keyframes fadeIn {

@@ -1,6 +1,9 @@
 import React, { useRef, useState } from 'react';
 import { ThemeMode } from '../types';
 import ArticleContent from './ArticleContent';
+import { getLengthStatus } from '../lib/contentLength';
+
+const BODY_MAX = 100000;
 
 interface ArticleBodyEditorProps {
   value: string;
@@ -91,14 +94,18 @@ const ArticleBodyEditor: React.FC<ArticleBodyEditorProps> = ({ value, onChange, 
         <textarea
           ref={textareaRef}
           rows={16}
+          maxLength={BODY_MAX}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => onChange(e.target.value.slice(0, BODY_MAX))}
           placeholder="Write your article. Leave a blank line between paragraphs. Use ## for a heading, > for a quote."
           className={`w-full px-4 py-3 rounded-sm border text-sm font-['EB_Garamond'] leading-relaxed focus:outline-none focus:border-amber-700 ${
             isLight ? 'bg-white border-black/15 text-gray-900' : 'bg-[#0f0f0f] border-white/15 text-white'
           }`}
         />
       )}
+      <p className={`text-xs mt-2 ${getLengthStatus(value.length, BODY_MAX).className}`}>
+        {value.length.toLocaleString()}/{BODY_MAX.toLocaleString()} — {getLengthStatus(value.length, BODY_MAX).label}
+      </p>
     </div>
   );
 };

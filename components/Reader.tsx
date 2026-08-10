@@ -7,6 +7,7 @@ import { logRead } from '../lib/reads';
 import { createTipCheckout, getBookTipEligibility } from '../lib/creatorPayments';
 import { claimFreeBook, createPurchaseCheckout } from '../lib/purchases';
 import { loadBookById } from '../lib/books';
+import CommentSection from './CommentSection';
 
 interface ReaderProps {
   book: Book;
@@ -733,6 +734,8 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
               <span className="text-lg sm:text-xl md:text-2xl font-['Playfair_Display'] italic">Turn Page</span>
             </button>
           </div>
+
+          <CommentSection contentType="book" contentId={book.id} theme={settings.theme} onRequireSignIn={onRequireSignIn} />
         </div>
         )}
       </main>

@@ -11,6 +11,7 @@ import {
   flagArticle
 } from '../lib/articles';
 import ArticleContent from './ArticleContent';
+import CommentSection from './CommentSection';
 
 interface ArticleReaderProps {
   slug: string;
@@ -231,6 +232,8 @@ const ArticleReader: React.FC<ArticleReaderProps> = ({ slug, theme, onBack, onRe
               )}
             </div>
           </div>
+
+          <CommentSection contentType="article" contentId={article.id} theme={theme} onRequireSignIn={onRequireSignIn} />
         </article>
       )}
     </div>

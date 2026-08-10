@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ThemeMode } from '../types';
+import { getLengthStatus } from '../lib/contentLength';
 import {
   CreatorBook,
   CreatorChapter,
@@ -253,8 +254,15 @@ const BookEditor: React.FC<BookEditorProps> = ({ theme, book, onBack, onChange }
       <div className={`rounded-sm border p-6 sm:p-8 mb-10 ${cardCls}`}>
         <div className="space-y-4">
           <div>
-            <label className={`block text-[10px] uppercase tracking-[0.2em] mb-2 ${textMuted}`}>Title</label>
-            <input className={inputCls} value={fields.title} onChange={(e) => setFields({ ...fields, title: e.target.value })} />
+            <label className={`block text-[10px] uppercase tracking-[0.2em] mb-2 ${textMuted}`}>
+              Title ({fields.title.length}/150)
+            </label>
+            <input
+              className={inputCls}
+              maxLength={150}
+              value={fields.title}
+              onChange={(e) => setFields({ ...fields, title: e.target.value })}
+            />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -275,9 +283,12 @@ const BookEditor: React.FC<BookEditorProps> = ({ theme, book, onBack, onChange }
             <input className={inputCls} value={fields.publishedDate} onChange={(e) => setFields({ ...fields, publishedDate: e.target.value })} />
           </div>
           <div>
-            <label className={`block text-[10px] uppercase tracking-[0.2em] mb-2 ${textMuted}`}>Synopsis</label>
+            <label className={`block text-[10px] uppercase tracking-[0.2em] mb-2 ${textMuted}`}>
+              Synopsis ({fields.synopsis.length}/500)
+            </label>
             <textarea
               rows={3}
+              maxLength={500}
               className={inputCls}
               value={fields.synopsis}
               onChange={(e) => setFields({ ...fields, synopsis: e.target.value })}
@@ -386,11 +397,15 @@ const BookEditor: React.FC<BookEditorProps> = ({ theme, book, onBack, onChange }
             />
             <textarea
               rows={16}
+              maxLength={100000}
               className={`${inputCls} font-serif leading-relaxed`}
               placeholder="Chapter text. Leave a blank line between paragraphs."
               value={chapterContent}
               onChange={(e) => setChapterContent(e.target.value)}
             />
+            <p className={`text-xs ${getLengthStatus(chapterContent.length, 100000).className}`}>
+              {chapterContent.length.toLocaleString()}/100,000 — {getLengthStatus(chapterContent.length, 100000).label}
+            </p>
             <div className="flex gap-3">
               <button
                 onClick={handleSaveChapter}
