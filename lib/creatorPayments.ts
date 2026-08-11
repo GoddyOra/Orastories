@@ -31,16 +31,12 @@ export async function createTipCheckout(bookId: string, amountCents: number): Pr
   return url;
 }
 
+// Tipping is now universal for any book with a creator - a creator who
+// hasn't finished Stripe Connect onboarding still receives tips, just held
+// on the platform's own balance until they connect (see create-tip-checkout
+// and the held_for_creator column). This just confirms the book is real.
 export async function getBookTipEligibility(bookId: string): Promise<boolean> {
-  const { data, error } = await supabase
-    .from('books')
-    .select('id, profiles!inner(stripe_payouts_enabled)')
-    .eq('id', bookId)
-    .maybeSingle();
-
+  const { data, error } = await supabase.from('books').select('creator_id').eq('id', bookId).maybeSingle();
   if (error) throw error;
-  const embedded = data?.profiles as { stripe_payouts_enabled: boolean } | { stripe_payouts_enabled: boolean }[] | undefined;
-  if (!embedded) return false;
-  const profile = Array.isArray(embedded) ? embedded[0] : embedded;
-  return profile?.stripe_payouts_enabled ?? false;
+  return Boolean(data?.creator_id);
 }

@@ -34,6 +34,11 @@ const getFontRange = (width: number) => {
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
+// "Effective" reading time - only accumulates while the tab is actually
+// visible, so a book left open in a background tab doesn't silently rack up
+// minutes.
+const TIP_PROMPT_THRESHOLD_SECONDS = 60 * 60;
+
 const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeChange, onRequireSignIn, onBookUpdate }) => {
   const { user, loading: authLoading } = useAuth();
   const [viewportWidth, setViewportWidth] = useState(getDeviceWidth);
@@ -62,6 +67,7 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
   const [showContinueGate, setShowContinueGate] = useState(false);
   const [continueSubmitting, setContinueSubmitting] = useState(false);
   const [continueError, setContinueError] = useState<string | null>(null);
+  const [showTipPrompt, setShowTipPrompt] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const atLoadedEdge = currentChapterIndex === book.chapters.length - 1;
@@ -181,6 +187,24 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
     };
   }, [book.id]);
 
+  // Fires at most once per book-reading session (this component's own
+  // lifetime for the current book), and only once tipping is actually
+  // possible for this book.
+  const secondsReadRef = useRef(0);
+  const hasShownTipPromptRef = useRef(false);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      secondsReadRef.current += 1;
+      if (!hasShownTipPromptRef.current && tipEligible && secondsReadRef.current >= TIP_PROMPT_THRESHOLD_SECONDS) {
+        hasShownTipPromptRef.current = true;
+        setShowTipPrompt(true);
+      }
+    }, 1000);
+    return () => window.clearInterval(interval);
+  }, [tipEligible]);
+
   const handleSubmitTip = async () => {
     const customCents = tipCustom ? Math.round(parseFloat(tipCustom) * 100) : null;
     const amountCents = customCents ?? tipAmountCents;
@@ -225,6 +249,37 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
       return;
     }
     goToChapter(currentChapterIndex + 1);
+  };
+
+  // Swipe left/right to turn the page - reuses handleNext/goToChapter
+  // directly so the chapter-3 wall and edge-of-book disabling are already
+  // respected, exactly like the Turn Page/Turn Back buttons.
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const SWIPE_MIN_DISTANCE = 60;
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const start = touchStartRef.current;
+    touchStartRef.current = null;
+    if (!start) return;
+
+    const touch = e.changedTouches[0];
+    const deltaX = touch.clientX - start.x;
+    const deltaY = touch.clientY - start.y;
+
+    // Require a clearly horizontal gesture so normal vertical scrolling
+    // through a chapter is never hijacked as a page turn.
+    if (Math.abs(deltaX) < SWIPE_MIN_DISTANCE || Math.abs(deltaX) <= Math.abs(deltaY)) return;
+
+    if (deltaX < 0) {
+      handleNext();
+    } else if (currentChapterIndex > 0) {
+      goToChapter(currentChapterIndex - 1);
+    }
   };
 
   const handleClaimFree = async () => {
@@ -360,7 +415,12 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
   };
 
   return (
-    <div className={`min-h-screen transition-colors duration-700 ease-in-out pb-20 md:pb-32 ${getThemeClasses()}`} ref={containerRef}>
+    <div
+      className={`min-h-screen transition-colors duration-700 ease-in-out pb-20 md:pb-32 ${getThemeClasses()}`}
+      ref={containerRef}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* Progress Bar */}
       <div className="fixed top-0 left-0 w-full h-1 z-50 bg-gray-800/30">
         <div 
@@ -386,7 +446,7 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
         </button>
 
         <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 hidden md:block max-w-[42vw] truncate rounded-full border px-4 py-2 text-[11px] uppercase tracking-[0.38em] font-bold backdrop-blur-md text-[#d4af37] border-[#d4af37]/30 bg-black/35">
-          Goddy Ora Presents
+          {book.author} Presents
         </div>
 
         <div className="pointer-events-auto flex items-center gap-2">
@@ -560,6 +620,33 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* 60-Minute Tip Prompt - a small dismissible nudge, not a blocking
+          modal, that opens the real Tip Modal on accept rather than
+          duplicating its amount-selection UI. */}
+      {showTipPrompt && (
+        <div className="fixed bottom-5 right-5 z-[105] max-w-xs rounded-sm border border-[#d4af37]/30 bg-[#141414]/98 backdrop-blur-md text-white p-5 shadow-2xl animate-fadeIn">
+          <p className="text-sm mb-4">Enjoying the story? Consider tipping {book.author} for their work.</p>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => {
+                setShowTipPrompt(false);
+                setTipError(null);
+                setShowTip(true);
+              }}
+              className="text-xs uppercase tracking-[0.2em] font-bold text-[#d4af37] hover:text-white transition-colors"
+            >
+              Tip the Author
+            </button>
+            <button
+              onClick={() => setShowTipPrompt(false)}
+              className="text-xs uppercase tracking-[0.2em] text-gray-400 hover:text-gray-200 transition-colors"
+            >
+              Dismiss
+            </button>
           </div>
         </div>
       )}

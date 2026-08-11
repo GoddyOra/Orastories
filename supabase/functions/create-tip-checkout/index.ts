@@ -45,9 +45,11 @@ Deno.serve(async (req: Request) => {
       .eq('id', book.creator_id)
       .maybeSingle();
     if (creatorError) throw creatorError;
-    if (!creatorProfile?.stripe_account_id || !creatorProfile.stripe_payouts_enabled) {
-      throw new Error("This author hasn't finished setting up payments yet.");
-    }
+    // A creator without a connected Stripe account isn't blocked from receiving
+    // tips - the full amount is simply held on the platform's own balance
+    // instead of being split via transfer_data, and the tip row is flagged so
+    // it can be manually reconciled once the creator finishes onboarding.
+    const isConnected = Boolean(creatorProfile?.stripe_account_id && creatorProfile.stripe_payouts_enabled);
 
     const platformFeeCents = Math.round(amountCents * PLATFORM_FEE_RATE);
 
@@ -59,7 +61,8 @@ Deno.serve(async (req: Request) => {
         reader_id: readerId,
         amount_cents: amountCents,
         platform_fee_cents: platformFeeCents,
-        status: 'pending'
+        status: 'pending',
+        held_for_creator: !isConnected
       })
       .select('id')
       .single();
@@ -77,11 +80,13 @@ Deno.serve(async (req: Request) => {
           quantity: 1
         }
       ],
-      payment_intent_data: {
-        application_fee_amount: platformFeeCents,
-        transfer_data: { destination: creatorProfile.stripe_account_id },
-        metadata: { tip_id: tipRow.id }
-      },
+      payment_intent_data: isConnected
+        ? {
+            application_fee_amount: platformFeeCents,
+            transfer_data: { destination: creatorProfile!.stripe_account_id! },
+            metadata: { tip_id: tipRow.id }
+          }
+        : { metadata: { tip_id: tipRow.id } },
       metadata: { tip_id: tipRow.id },
       success_url: `${origin}/?tip=success`,
       cancel_url: `${origin}/?tip=cancelled`

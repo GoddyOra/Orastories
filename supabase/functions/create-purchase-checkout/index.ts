@@ -43,9 +43,11 @@ Deno.serve(async (req: Request) => {
       .eq('id', book.creator_id)
       .maybeSingle();
     if (creatorError) throw creatorError;
-    if (!creatorProfile?.stripe_account_id || !creatorProfile.stripe_payouts_enabled) {
-      throw new Error("This author hasn't finished setting up payments yet.");
-    }
+    // A creator without a connected Stripe account isn't blocked from selling -
+    // the full charge is simply held on the platform's own balance instead of
+    // being split via transfer_data, and the purchase row is flagged so it can
+    // be manually reconciled once the creator finishes onboarding.
+    const isConnected = Boolean(creatorProfile?.stripe_account_id && creatorProfile.stripe_payouts_enabled);
 
     const { data: existingPurchase, error: existingError } = await supabaseAdmin
       .from('purchases')
@@ -71,7 +73,8 @@ Deno.serve(async (req: Request) => {
         buyer_id: buyerId,
         amount_cents: amountCents,
         platform_fee_cents: platformFeeCents,
-        status: 'pending'
+        status: 'pending',
+        held_for_creator: !isConnected
       })
       .select('id')
       .single();
@@ -89,14 +92,16 @@ Deno.serve(async (req: Request) => {
           quantity: 1
         }
       ],
-      payment_intent_data: {
-        application_fee_amount: platformFeeCents,
-        transfer_data: { destination: creatorProfile.stripe_account_id },
-        metadata: { purchase_id: purchaseRow.id }
-      },
+      payment_intent_data: isConnected
+        ? {
+            application_fee_amount: platformFeeCents,
+            transfer_data: { destination: creatorProfile!.stripe_account_id! },
+            metadata: { purchase_id: purchaseRow.id }
+          }
+        : { metadata: { purchase_id: purchaseRow.id } },
       metadata: { purchase_id: purchaseRow.id },
-      success_url: `${origin}/books.html?purchase=success`,
-      cancel_url: `${origin}/books.html?purchase=cancelled`
+      success_url: `${origin}/books?purchase=success`,
+      cancel_url: `${origin}/books?purchase=cancelled`
     });
 
     const { error: sessionUpdateError } = await supabaseAdmin

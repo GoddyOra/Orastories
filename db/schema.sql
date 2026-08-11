@@ -564,3 +564,13 @@ create policy "readers delete their own article comments" on article_comments
 create policy "signed-in users flag comments as themselves" on comment_flags
   for insert with check (auth.uid() = flagger_id);
 -- No select policy: same reasoning as article_flags.
+
+-- Phase I: platform-Stripe fallback for creators who haven't finished
+-- Connect onboarding yet. When held_for_creator = true, the full charge
+-- landed in Orastories' own Stripe balance (no transfer_data on the
+-- Checkout Session) rather than being blocked outright - this column is
+-- the queryable record of what's owed to that creator once they connect.
+-- No RLS changes needed: it's just another column on rows already covered
+-- by the existing buyer/creator select policies.
+alter table purchases add column if not exists held_for_creator boolean not null default false;
+alter table tips add column if not exists held_for_creator boolean not null default false;

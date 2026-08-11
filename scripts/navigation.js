@@ -5,7 +5,7 @@
   const container = nav.querySelector(':scope > div');
   if (!container) return;
 
-  const brand = container.querySelector('a[href="index.html"]');
+  const brand = container.querySelector('a[href="/"]');
   if (!brand) return;
 
   const linkGroup = Array.from(container.children).find((node) => node.tagName === 'DIV');
@@ -150,10 +150,14 @@
   linkGroup.id = 'siteNavLinks';
   const navLinks = Array.from(linkGroup.querySelectorAll('a[href]'));
 
+  // Handles both the new extensionless links (/about) and, for anyone who
+  // still lands on an old bookmarked /about.html URL (GitHub Pages serves
+  // both - see Phase I), the legacy form too, so nav highlighting doesn't
+  // silently break for either.
   const normalizePath = (value) => {
     const cleaned = (value || '').split('?')[0].split('#')[0];
-    const leaf = cleaned.substring(cleaned.lastIndexOf('/') + 1);
-    return (leaf || 'index.html').toLowerCase();
+    const leaf = cleaned.substring(cleaned.lastIndexOf('/') + 1).replace(/\.html$/i, '');
+    return (leaf || 'index').toLowerCase();
   };
 
   const currentPath = normalizePath(window.location.pathname);
@@ -165,7 +169,7 @@
   });
 
   const storageKey = 'orastories-nav-collapsed';
-  const defaultCollapsed = currentPath !== 'index.html';
+  const defaultCollapsed = currentPath !== 'index';
   let collapsed = localStorage.getItem(storageKey);
   collapsed = collapsed === null ? defaultCollapsed : collapsed === 'true';
 
@@ -302,7 +306,7 @@
     themeUpdaters = [];
 
     const link = document.createElement('a');
-    link.href = 'index.html?openPortal=1';
+    link.href = '/?openPortal=1';
     link.textContent = 'Sign In';
 
     const update = () => {
@@ -328,7 +332,7 @@
     menu.classList.add('hidden', 'absolute', 'right-0', 'mt-2', 'w-40', 'rounded-sm', 'border', 'shadow-lg', 'py-1', 'z-50', 'overflow-hidden');
 
     const accountLink = document.createElement('a');
-    accountLink.href = 'index.html?openPortal=1';
+    accountLink.href = '/?openPortal=1';
     accountLink.textContent = 'My Account';
 
     const signOutBtn = document.createElement('button');
