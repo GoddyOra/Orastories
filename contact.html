@@ -46,7 +46,6 @@
       </a>
       <div class="flex flex-wrap justify-end gap-3 sm:gap-5 md:gap-8 items-center text-sm sm:text-base">
         <a href="/" class="hover:text-amber-700 dark:hover:text-amber-400 transition-colors">Home</a>
-        <a href="/about" class="hover:text-amber-700 dark:hover:text-amber-400 transition-colors">About</a>
         <a href="/books" class="hover:text-amber-700 dark:hover:text-amber-400 transition-colors">Books</a>
         <a href="/reviews" class="hover:text-amber-700 dark:hover:text-amber-400 transition-colors">Reviews</a>
         <a href="/blog" class="hover:text-amber-700 dark:hover:text-amber-400 transition-colors">Blog</a>
@@ -85,9 +84,6 @@
             </a>
             <a href="https://linkedin.com/in/godwinora" target="_blank" rel="noopener noreferrer" class="text-amber-700 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 transition-colors">
               LinkedIn
-            </a>
-            <a href="https://www.upwork.com/freelancers/~0177e224d5512b8016" target="_blank" rel="noopener noreferrer" class="text-amber-700 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 transition-colors">
-              Upwork
             </a>
           </div>
         </div>
@@ -140,19 +136,23 @@
 
         <div>
           <label for="message" class="block text-sm font-semibold mb-2 dark:text-white">Message</label>
-          <textarea 
-            id="message" 
-            name="message" 
-            required 
+          <textarea
+            id="message"
+            name="message"
+            required
+            maxlength="5000"
             rows="5"
             class="w-full px-4 py-2 border border-gray-300 dark:border-white/10 rounded bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-700 dark:focus:ring-amber-400 resize-none"
             placeholder="Your message..."
           ></textarea>
         </div>
 
-        <button 
-          type="submit" 
-          class="w-full py-3 bg-amber-700 dark:bg-amber-600 text-white rounded hover:bg-amber-800 dark:hover:bg-amber-700 transition-all font-semibold"
+        <p id="contactFormError" class="hidden text-sm text-red-500"></p>
+
+        <button
+          type="submit"
+          id="contactSubmitBtn"
+          class="w-full py-3 bg-amber-700 dark:bg-amber-600 text-white rounded hover:bg-amber-800 dark:hover:bg-amber-700 transition-all font-semibold disabled:opacity-50"
         >
           Send Message
         </button>
@@ -197,10 +197,58 @@
       }
     });
 
-    contactForm.addEventListener('submit', (e) => {
+    const contactFormError = document.getElementById('contactFormError');
+    const contactSubmitBtn = document.getElementById('contactSubmitBtn');
+
+    function showContactError(message) {
+      contactFormError.textContent = message;
+      contactFormError.classList.remove('hidden');
+    }
+
+    contactForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      alert('Thank you for your message! We will get back to you soon.');
-      contactForm.reset();
+      contactFormError.classList.add('hidden');
+      contactSubmitBtn.disabled = true;
+      contactSubmitBtn.textContent = 'Sending...';
+
+      try {
+        const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+        const supabase = createClient(
+          'https://spordcubtugawsyelqxz.supabase.co',
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNwb3JkY3VidHVnYXdzeWVscXh6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxMTQ0MTMsImV4cCI6MjEwMTY5MDQxM30.jQhzR_pTDIFpaJDfBmxn0-9gFovxNRZEt4nfy20uNbg'
+        );
+
+        // The form is open to anonymous visitors as well as signed-in
+        // readers - sender_id is only attached when a session exists,
+        // never required.
+        const {
+          data: { session }
+        } = await supabase.auth.getSession();
+
+        const { error } = await supabase.from('contact_messages').insert({
+          sender_id: session ? session.user.id : null,
+          name: document.getElementById('name').value.trim(),
+          email: document.getElementById('email').value.trim(),
+          subject: document.getElementById('subject').value.trim(),
+          message: document.getElementById('message').value.trim()
+        });
+
+        if (error) throw error;
+
+        contactSubmitBtn.textContent = 'Message Sent';
+        contactForm.reset();
+        setTimeout(() => {
+          contactSubmitBtn.textContent = 'Send Message';
+          contactSubmitBtn.disabled = false;
+        }, 2500);
+      } catch (error) {
+        console.error('Contact form submission failed:', error);
+        showContactError(
+          error instanceof Error ? error.message : 'Something went wrong. Please try again.'
+        );
+        contactSubmitBtn.disabled = false;
+        contactSubmitBtn.textContent = 'Send Message';
+      }
     });
   </script>
   <script type="module" src="scripts/navigation.js"></script>

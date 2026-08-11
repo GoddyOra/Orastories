@@ -574,3 +574,27 @@ create policy "signed-in users flag comments as themselves" on comment_flags
 -- by the existing buyer/creator select policies.
 alter table purchases add column if not exists held_for_creator boolean not null default false;
 alter table tips add column if not exists held_for_creator boolean not null default false;
+
+-- Contact page submissions. sender_id is nullable - the form is open to
+-- anonymous visitors as well as signed-in readers, matching how the page
+-- itself has always worked. No select policy: same reasoning as
+-- article_flags/comment_flags - this is private correspondence to the site
+-- owner (dashboard/service-role only), not public data.
+create table contact_messages (
+  id uuid primary key default gen_random_uuid(),
+  sender_id uuid references profiles(id) on delete set null,
+  name text not null check (char_length(name) between 1 and 150),
+  email text not null check (char_length(email) between 3 and 255),
+  subject text not null check (char_length(subject) between 1 and 200),
+  message text not null check (char_length(message) between 1 and 5000),
+  created_at timestamptz not null default now()
+);
+
+alter table contact_messages enable row level security;
+
+-- sender_id must be either null (anonymous) or the submitter's own id -
+-- prevents a signed-in user from spoofing someone else's identity on a
+-- message.
+create policy "anyone sends a contact message" on contact_messages
+  for insert to anon, authenticated
+  with check (sender_id is null or sender_id = auth.uid());

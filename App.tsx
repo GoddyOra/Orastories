@@ -14,6 +14,7 @@ const App: React.FC = () => {
   const [isLoadingBook, setIsLoadingBook] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [showPortal, setShowPortal] = useState(false);
+  const [signInReason, setSignInReason] = useState<string | null>(null);
   const [selectedCreatorUsername, setSelectedCreatorUsername] = useState<string | null>(null);
   const [selectedArticleSlug, setSelectedArticleSlug] = useState<string | null>(null);
   const [tipNotice, setTipNotice] = useState<string | null>(null);
@@ -155,9 +156,10 @@ const App: React.FC = () => {
     }
   };
 
-  const handleOpenPortal = () => {
+  const handleOpenPortal = (reason?: string) => {
     setSelectedBook(null);
     setShowPortal(true);
+    setSignInReason(reason ?? null);
   };
 
   const handleSelectCreator = (username: string) => {
@@ -199,6 +201,7 @@ const App: React.FC = () => {
         ) : showPortal ? (
           <Portal
             theme={theme}
+            reason={signInReason}
             onSelectBook={handleSelectBook}
             onSelectCreator={handleSelectCreator}
             onSelectArticle={handleSelectArticle}

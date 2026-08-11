@@ -14,7 +14,7 @@ interface ReaderProps {
   onClose: () => void;
   externalTheme: ThemeMode;
   onThemeChange: (theme: ThemeMode) => void;
-  onRequireSignIn: () => void;
+  onRequireSignIn: (reason?: string) => void;
   onBookUpdate: (book: Book) => void;
 }
 
@@ -500,7 +500,7 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
             <button
               onClick={() => {
                 if (!user) {
-                  onRequireSignIn();
+                  onRequireSignIn('tip');
                   return;
                 }
                 setTipError(null);
@@ -634,6 +634,10 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
             <button
               onClick={() => {
                 setShowTipPrompt(false);
+                if (!user) {
+                  onRequireSignIn('tip');
+                  return;
+                }
                 setTipError(null);
                 setShowTip(true);
               }}

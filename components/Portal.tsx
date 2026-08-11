@@ -17,13 +17,24 @@ const ArticleStudio = React.lazy(() => import('./ArticleStudio'));
 
 interface PortalProps {
   theme: ThemeMode;
+  reason?: string | null;
   onSelectBook: (book: BookCatalogItem) => void;
   onSelectCreator: (username: string) => void;
   onSelectArticle: (slug: string) => void;
   onClose: () => void;
 }
 
-const Portal: React.FC<PortalProps> = ({ theme, onSelectBook, onSelectCreator, onSelectArticle, onClose }) => {
+// Context-specific copy for why sign-in is being requested - falls back to
+// the generic message when no reason is given (e.g. the plain nav "Sign In"
+// link).
+const SIGN_IN_REASONS: Record<string, { signIn: string; signUp: string }> = {
+  tip: {
+    signIn: 'Sign in to tip the author and support their work directly.',
+    signUp: 'Create a free account to tip the author and support their work directly.'
+  }
+};
+
+const Portal: React.FC<PortalProps> = ({ theme, reason, onSelectBook, onSelectCreator, onSelectArticle, onClose }) => {
   const isLight = theme !== 'dark';
   const { user, profile, loading, signIn, signUp, signOut, refreshProfile } = useAuth();
 
@@ -205,7 +216,13 @@ const Portal: React.FC<PortalProps> = ({ theme, onSelectBook, onSelectCreator, o
               {mode === 'signIn' ? 'Welcome Back' : 'Join Orastories'}
             </h1>
             <p className={`text-sm mb-8 ${textMuted}`}>
-              {mode === 'signIn' ? 'Sign in to bookmark books and leave reviews.' : 'Create an account to save your place and rate what you read.'}
+              {reason && SIGN_IN_REASONS[reason]
+                ? mode === 'signIn'
+                  ? SIGN_IN_REASONS[reason].signIn
+                  : SIGN_IN_REASONS[reason].signUp
+                : mode === 'signIn'
+                  ? 'Sign in to bookmark books and leave reviews.'
+                  : 'Create an account to save your place and rate what you read.'}
             </p>
 
             {checkEmail ? (
