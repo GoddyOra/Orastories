@@ -65,7 +65,7 @@ const Library: React.FC<LibraryProps> = ({ onSelectBook, onSelectCreator, theme 
           Orastories
         </h1>
         <p className={`text-[10px] sm:text-xs uppercase tracking-[0.35em] sm:tracking-[0.6em] font-semibold mb-8 sm:mb-10 ${isLight ? 'text-gray-500' : 'text-gray-500'}`}>
-          The Archives of Goddy Ora
+          A Community of Storytellers
         </p>
         <div className={`w-16 h-px mx-auto opacity-40 ${isLight ? 'bg-gray-400' : 'bg-[#d4af37]'}`}></div>
       </header>

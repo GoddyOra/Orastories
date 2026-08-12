@@ -347,7 +347,7 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
     const preventKeys = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'u' || e.key === 'p' || e.key === 's')) {
         e.preventDefault();
-        alert("The Archives of Goddy Ora are for reading, not for copying.");
+        alert("Orastories content is for reading, not for copying.");
       }
     };
 
