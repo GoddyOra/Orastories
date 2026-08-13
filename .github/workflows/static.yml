@@ -47,8 +47,10 @@ jobs:
           # subscribes to anything - that init throws on Node < 22, which
           # lacks a native WebSocket global. Node 20 built cleanly right up
           # until this script was added because nothing before it ever
-          # touched supabase-js during the build itself.
-          node-version: 22
+          # touched supabase-js during the build itself. Pinned to 24
+          # specifically (not just the ">=22" minimum) to match local dev -
+          # this exact mismatch is what let the bug reach CI unnoticed.
+          node-version: 24
           cache: npm
       - name: Install dependencies
         run: npm ci
