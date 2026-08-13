@@ -83,6 +83,10 @@ jobs:
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          # Baked into the client bundle at build time, same as the two
+          # above - lib/sentry.ts already no-ops safely if this secret
+          # isn't set yet, so this is safe to ship ahead of it existing.
+          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
