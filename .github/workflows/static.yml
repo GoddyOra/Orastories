@@ -41,7 +41,14 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # generate-seo-pages.mjs (part of `npm run build` below) creates a
+          # real @supabase/supabase-js client, which eagerly initializes its
+          # Realtime client on construction even though this script never
+          # subscribes to anything - that init throws on Node < 22, which
+          # lacks a native WebSocket global. Node 20 built cleanly right up
+          # until this script was added because nothing before it ever
+          # touched supabase-js during the build itself.
+          node-version: 22
           cache: npm
       - name: Install dependencies
         run: npm ci
