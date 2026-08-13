@@ -1,13 +1,29 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import Library from './components/Library';
-import Reader from './components/Reader';
-import Portal from './components/Portal';
-import CreatorProfile from './components/CreatorProfile';
-import ArticleReader from './components/ArticleReader';
 import NavAccountControl from './components/NavAccountControl';
 import Footer from './components/Footer';
 import { Book, ThemeMode } from './types';
 import { BookCatalogItem, loadBookById } from './constants';
+
+// A first-time visitor lands on Library and needs none of these until they
+// actually click something - eagerly bundling all four into the main chunk
+// meant everyone downloaded Reader/Portal/payment code before ever using it.
+const Reader = React.lazy(() => import('./components/Reader'));
+const Portal = React.lazy(() => import('./components/Portal'));
+const CreatorProfile = React.lazy(() => import('./components/CreatorProfile'));
+const ArticleReader = React.lazy(() => import('./components/ArticleReader'));
+
+const RouteLoadingFallback: React.FC<{ theme: ThemeMode }> = ({ theme }) => (
+  <div className={`min-h-screen flex items-center justify-center ${theme === 'light' ? 'bg-[#fcfaf7]' : 'bg-[#0f0f0f]'}`}>
+    <div
+      className={`rounded border px-5 py-3 text-sm font-semibold ${
+        theme === 'light' ? 'border-black/10 bg-white/95 text-[#1a1a1a]' : 'border-white/10 bg-[#161616]/95 text-[#e0e0e0]'
+      }`}
+    >
+      Loading...
+    </div>
+  </div>
+);
 
 const App: React.FC = () => {
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
@@ -230,40 +246,48 @@ const App: React.FC = () => {
       <main>
         {selectedBook ? (
           <div className="animate-readerFadeIn">
-            <Reader
-              book={selectedBook}
-              onClose={() => setSelectedBook(null)}
-              externalTheme={theme}
-              onThemeChange={setTheme}
-              onRequireSignIn={handleOpenPortal}
-              onBookUpdate={setSelectedBook}
-              onOpenWallet={() => handleOpenPortal()}
-            />
+            <Suspense fallback={<RouteLoadingFallback theme={theme} />}>
+              <Reader
+                book={selectedBook}
+                onClose={() => setSelectedBook(null)}
+                externalTheme={theme}
+                onThemeChange={setTheme}
+                onRequireSignIn={handleOpenPortal}
+                onBookUpdate={setSelectedBook}
+                onOpenWallet={() => handleOpenPortal()}
+              />
+            </Suspense>
           </div>
         ) : showPortal ? (
-          <Portal
-            theme={theme}
-            reason={signInReason}
-            onSelectBook={handleSelectBook}
-            onSelectCreator={handleSelectCreator}
-            onSelectArticle={handleSelectArticle}
-            onClose={() => setShowPortal(false)}
-          />
+          <Suspense fallback={<RouteLoadingFallback theme={theme} />}>
+            <Portal
+              theme={theme}
+              reason={signInReason}
+              onSelectBook={handleSelectBook}
+              onSelectCreator={handleSelectCreator}
+              onSelectArticle={handleSelectArticle}
+              onClose={() => setShowPortal(false)}
+            />
+          </Suspense>
         ) : selectedCreatorUsername ? (
-          <CreatorProfile
-            username={selectedCreatorUsername}
-            theme={theme}
-            onSelectBook={handleSelectBook}
-            onBack={() => setSelectedCreatorUsername(null)}
-          />
+          <Suspense fallback={<RouteLoadingFallback theme={theme} />}>
+            <CreatorProfile
+              username={selectedCreatorUsername}
+              theme={theme}
+              onSelectBook={handleSelectBook}
+              onBack={() => setSelectedCreatorUsername(null)}
+            />
+          </Suspense>
         ) : selectedArticleSlug ? (
-          <ArticleReader
-            slug={selectedArticleSlug}
-            theme={theme}
-            onBack={() => setSelectedArticleSlug(null)}
-            onRequireSignIn={handleOpenPortal}
-            onSelectCreator={handleSelectCreator}
-          />
+          <Suspense fallback={<RouteLoadingFallback theme={theme} />}>
+            <ArticleReader
+              slug={selectedArticleSlug}
+              theme={theme}
+              onBack={() => setSelectedArticleSlug(null)}
+              onRequireSignIn={handleOpenPortal}
+              onSelectCreator={handleSelectCreator}
+            />
+          </Suspense>
         ) : (
           <>
             {loadError && (

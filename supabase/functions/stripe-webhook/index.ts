@@ -1,5 +1,6 @@
 import { stripe } from '../_shared/stripe.ts';
 import { supabaseAdmin } from '../_shared/supabaseAdmin.ts';
+import { reportError } from '../_shared/sentry.ts';
 
 // Public endpoint - Stripe calls this directly, not through an authenticated
 // app user, so this function has verify_jwt disabled (see supabase/config.toml).
@@ -107,7 +108,10 @@ Deno.serve(async (req: Request) => {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error) {
-    console.error('Webhook handler error:', error);
+    // A silent failure here means a reader paid real money and their
+    // purchase/wallet never got credited - this is the one place in the
+    // app where "log it and move on" isn't good enough.
+    reportError(error, { function: 'stripe-webhook', eventType: event?.type });
     return new Response('Webhook handler error', { status: 500 });
   }
 });

@@ -1,6 +1,7 @@
 import { stripe } from '../_shared/stripe.ts';
 import { supabaseAdmin } from '../_shared/supabaseAdmin.ts';
 import { corsHeaders } from '../_shared/cors.ts';
+import { reportError } from '../_shared/sentry.ts';
 
 // Triggered daily by .github/workflows/sweep-payouts.yml, authenticated with
 // the service-role key as a bearer token (verify_jwt stays on - this is not
@@ -73,6 +74,10 @@ Deno.serve(async (req: Request) => {
         // double-transfer if the failure was actually a delivery issue
         // rather than a real decline.
         await supabaseAdmin.from('payouts').update({ status: 'failed' }).eq('id', claimed.payout_id);
+        // Money that's owed to a real creator failed to transfer - this is
+        // exactly the kind of thing that should page someone, not just sit
+        // in a 'failed' row nobody's looking at.
+        reportError(transferError, { function: 'sweep-creator-payouts', creatorId: creator.id, payoutId: claimed.payout_id });
         results.push({
           creatorId: creator.id,
           status: 'failed',
@@ -83,7 +88,7 @@ Deno.serve(async (req: Request) => {
 
     return json({ swept: results.length, results });
   } catch (error) {
-    console.error('sweep-creator-payouts error:', error);
+    reportError(error, { function: 'sweep-creator-payouts' });
     return json({ error: error instanceof Error ? error.message : 'Unknown error' }, 500);
   }
 });

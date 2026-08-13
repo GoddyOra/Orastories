@@ -3,6 +3,7 @@ import { supabaseAdmin } from '../_shared/supabaseAdmin.ts';
 import { getUserClient } from '../_shared/supabaseUser.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { assertUnderDailyLimit, getClientIp } from '../_shared/rateLimit.ts';
+import { reportError } from '../_shared/sentry.ts';
 
 // Same commission as the old card-tip flow.
 const PLATFORM_FEE_RATE = 0.1;
@@ -134,6 +135,7 @@ Deno.serve(async (req: Request) => {
 
     return json({ url: session.url });
   } catch (error) {
+    reportError(error, { function: 'create-purchase-checkout' });
     return json({ error: error instanceof Error ? error.message : 'Unknown error' }, 400);
   }
 });

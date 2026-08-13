@@ -3,6 +3,7 @@ import { supabaseAdmin } from '../_shared/supabaseAdmin.ts';
 import { getUserClient } from '../_shared/supabaseUser.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { assertUnderDailyLimit, getClientIp } from '../_shared/rateLimit.ts';
+import { reportError } from '../_shared/sentry.ts';
 
 // Fixed denominations only - coin amounts are never trusted from the
 // client, unlike the old create-tip-checkout which took an arbitrary
@@ -77,6 +78,7 @@ Deno.serve(async (req: Request) => {
 
     return json({ url: session.url });
   } catch (error) {
+    reportError(error, { function: 'create-coin-checkout' });
     return json({ error: error instanceof Error ? error.message : 'Unknown error' }, 400);
   }
 });

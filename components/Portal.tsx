@@ -216,89 +216,114 @@ const Portal: React.FC<PortalProps> = ({ theme, reason, onSelectBook, onSelectCr
         {loading ? (
           <p className={`text-center text-sm uppercase tracking-[0.3em] ${textMuted}`}>Loading...</p>
         ) : !user ? (
-          <div className={`max-w-md mx-auto rounded-sm border p-8 sm:p-10 ${cardBg}`}>
-            <h1 className={`text-3xl sm:text-4xl font-['Playfair_Display'] mb-2 ${isLight ? 'text-gray-900' : 'text-white'}`}>
-              {mode === 'signIn' ? 'Welcome Back' : 'Join Orastories'}
-            </h1>
-            <p className={`text-sm mb-8 ${textMuted}`}>
-              {reason && SIGN_IN_REASONS[reason]
-                ? mode === 'signIn'
-                  ? SIGN_IN_REASONS[reason].signIn
-                  : SIGN_IN_REASONS[reason].signUp
-                : mode === 'signIn'
-                  ? 'Sign in to bookmark books and leave reviews.'
-                  : 'Create an account to save your place and rate what you read.'}
-            </p>
-
-            {checkEmail ? (
-              <p className={`text-sm ${isLight ? 'text-gray-700' : 'text-gray-300'}`}>
-                Check <strong>{email}</strong> for a confirmation link, then come back and sign in.
+          <div className="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
+            <div className="text-center md:text-left">
+              <h2 className={`text-4xl sm:text-5xl font-['Playfair_Display'] mb-3 tracking-tight ${isLight ? 'text-gray-900' : 'text-white'}`}>
+                Orastories
+              </h2>
+              <p className={`text-[10px] uppercase tracking-[0.35em] font-semibold mb-8 ${textMuted}`}>
+                A Community of Storytellers
               </p>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {mode === 'signUp' && (
+              <ul className={`space-y-3 text-sm text-left inline-block md:block ${isLight ? 'text-gray-700' : 'text-gray-300'}`}>
+                <li className="flex items-start gap-3">
+                  <span className="text-amber-700 mt-0.5">&#10003;</span>
+                  <span>Bookmark books and pick up right where you left off</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-amber-700 mt-0.5">&#10003;</span>
+                  <span>Rate and review what you read</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-amber-700 mt-0.5">&#10003;</span>
+                  <span>Tip authors directly for their work</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className={`rounded-sm border p-8 sm:p-10 ${cardBg}`}>
+              <h1 className={`text-3xl sm:text-4xl font-['Playfair_Display'] mb-2 ${isLight ? 'text-gray-900' : 'text-white'}`}>
+                {mode === 'signIn' ? 'Welcome Back' : 'Join Orastories'}
+              </h1>
+              <p className={`text-sm mb-8 ${textMuted}`}>
+                {reason && SIGN_IN_REASONS[reason]
+                  ? mode === 'signIn'
+                    ? SIGN_IN_REASONS[reason].signIn
+                    : SIGN_IN_REASONS[reason].signUp
+                  : mode === 'signIn'
+                    ? 'Sign in to bookmark books and leave reviews.'
+                    : 'Create an account to save your place and rate what you read.'}
+              </p>
+
+              {checkEmail ? (
+                <p className={`text-sm ${isLight ? 'text-gray-700' : 'text-gray-300'}`}>
+                  Check <strong>{email}</strong> for a confirmation link, then come back and sign in.
+                </p>
+              ) : (
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {mode === 'signUp' && (
+                    <div>
+                      <label className={`block text-[10px] uppercase tracking-[0.2em] mb-2 ${textMuted}`}>Username</label>
+                      <input
+                        type="text"
+                        required
+                        value={signupUsername}
+                        onChange={(e) => setSignupUsername(e.target.value.toLowerCase())}
+                        placeholder="lowercase letters, numbers, underscores"
+                        className={`w-full px-4 py-3 rounded-sm border text-sm focus:outline-none focus:border-amber-700 ${
+                          isLight ? 'bg-white border-black/15 text-gray-900' : 'bg-[#0f0f0f] border-white/15 text-white'
+                        }`}
+                      />
+                    </div>
+                  )}
                   <div>
-                    <label className={`block text-[10px] uppercase tracking-[0.2em] mb-2 ${textMuted}`}>Username</label>
+                    <label className={`block text-[10px] uppercase tracking-[0.2em] mb-2 ${textMuted}`}>Email</label>
                     <input
-                      type="text"
+                      type="email"
                       required
-                      value={signupUsername}
-                      onChange={(e) => setSignupUsername(e.target.value.toLowerCase())}
-                      placeholder="lowercase letters, numbers, underscores"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       className={`w-full px-4 py-3 rounded-sm border text-sm focus:outline-none focus:border-amber-700 ${
                         isLight ? 'bg-white border-black/15 text-gray-900' : 'bg-[#0f0f0f] border-white/15 text-white'
                       }`}
                     />
                   </div>
-                )}
-                <div>
-                  <label className={`block text-[10px] uppercase tracking-[0.2em] mb-2 ${textMuted}`}>Email</label>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className={`w-full px-4 py-3 rounded-sm border text-sm focus:outline-none focus:border-amber-700 ${
-                      isLight ? 'bg-white border-black/15 text-gray-900' : 'bg-[#0f0f0f] border-white/15 text-white'
-                    }`}
-                  />
-                </div>
-                <div>
-                  <label className={`block text-[10px] uppercase tracking-[0.2em] mb-2 ${textMuted}`}>Password</label>
-                  <input
-                    type="password"
-                    required
-                    minLength={6}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className={`w-full px-4 py-3 rounded-sm border text-sm focus:outline-none focus:border-amber-700 ${
-                      isLight ? 'bg-white border-black/15 text-gray-900' : 'bg-[#0f0f0f] border-white/15 text-white'
-                    }`}
-                  />
-                </div>
+                  <div>
+                    <label className={`block text-[10px] uppercase tracking-[0.2em] mb-2 ${textMuted}`}>Password</label>
+                    <input
+                      type="password"
+                      required
+                      minLength={6}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className={`w-full px-4 py-3 rounded-sm border text-sm focus:outline-none focus:border-amber-700 ${
+                        isLight ? 'bg-white border-black/15 text-gray-900' : 'bg-[#0f0f0f] border-white/15 text-white'
+                      }`}
+                    />
+                  </div>
 
-                {formError && <p className="text-sm text-red-500">{formError}</p>}
+                  {formError && <p className="text-sm text-red-500">{formError}</p>}
 
-                <button
-                  type="submit"
-                  disabled={formLoading}
-                  className="w-full py-3.5 border border-amber-700 text-amber-700 text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-amber-700 hover:text-white transition-all disabled:opacity-50"
-                >
-                  {formLoading ? 'Please wait...' : mode === 'signIn' ? 'Sign In' : 'Sign Up'}
-                </button>
+                  <button
+                    type="submit"
+                    disabled={formLoading}
+                    className="w-full py-3.5 border border-amber-700 text-amber-700 text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-amber-700 hover:text-white transition-all disabled:opacity-50"
+                  >
+                    {formLoading ? 'Please wait...' : mode === 'signIn' ? 'Sign In' : 'Sign Up'}
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMode(mode === 'signIn' ? 'signUp' : 'signIn');
-                    setFormError(null);
-                  }}
-                  className={`w-full text-xs text-center ${textMuted} hover:text-amber-700`}
-                >
-                  {mode === 'signIn' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
-                </button>
-              </form>
-            )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode(mode === 'signIn' ? 'signUp' : 'signIn');
+                      setFormError(null);
+                    }}
+                    className={`w-full text-xs text-center ${textMuted} hover:text-amber-700`}
+                  >
+                    {mode === 'signIn' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
+                  </button>
+                </form>
+              )}
+            </div>
           </div>
         ) : profile && !profile.username ? (
           <div className={`max-w-md mx-auto rounded-sm border p-8 sm:p-10 ${cardBg}`}>

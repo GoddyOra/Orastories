@@ -29,8 +29,32 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Single deploy job since we're just deploying
+  # Runs typecheck + the unit test suite before deploy is even allowed to
+  # start (see `needs: test` below) - the previous version of this workflow
+  # had no such gate, so the only signal that a build was broken was the
+  # deploy job itself failing in production (see the Node 20/22 WebSocket
+  # incident). GitHub Actions' `needs:` only works between jobs in the same
+  # workflow file, which is why this lives here rather than in a separate
+  # ci.yml - a separate file could not actually block this deploy job.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Unit tests
+        run: npm test
+
   deploy:
+    needs: test
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

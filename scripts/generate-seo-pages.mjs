@@ -216,7 +216,7 @@ function pageShell({ title, description, canonicalPath, ogType, ogImage, jsonLd,
   <nav class="fixed top-0 left-0 right-0 bg-white/95 dark:bg-black/95 backdrop-blur z-50 border-b border-gray-200 dark:border-white/10 transition-colors duration-500">
     <div class="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-3 md:py-4 flex flex-wrap justify-between items-center gap-3">
       <a href="/" class="inline-flex items-center transition-opacity hover:opacity-90" aria-label="Orastories Home">
-        <img src="images/logos/orastories-logo-option-2.svg" alt="Orastories" class="h-10 w-auto" />
+        <img id="siteLogo" src="images/logos/orastories-logo-option-2.svg" alt="Orastories" class="h-10 w-auto" />
       </a>
       <div class="flex flex-wrap justify-end gap-3 sm:gap-5 md:gap-8 items-center text-sm sm:text-base">
         <a href="/" class="hover:text-amber-700 dark:hover:text-amber-400 transition-colors">Home</a>
@@ -247,8 +247,13 @@ ${bodyHtml}
     const themeToggle = document.getElementById('themeToggle');
     const sunIcon = document.getElementById('sunIcon');
     const moonIcon = document.getElementById('moonIcon');
+    const siteLogo = document.getElementById('siteLogo');
 
     const applyTheme = (isDark) => {
+      // A flat <img> logo can't inherit dark-mode CSS from this page, so
+      // the near-black strokes/text baked into the light-mode file just
+      // vanish against a dark nav - swap to a pre-built dark variant instead.
+      siteLogo.src = isDark ? 'images/logos/orastories-logo-option-2-dark.svg' : 'images/logos/orastories-logo-option-2.svg';
       if (isDark) {
         seoPageBody.classList.add('dark-mode');
         seoPageBody.style.backgroundColor = '#0f0f0f';
