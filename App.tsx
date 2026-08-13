@@ -7,7 +7,7 @@ import ArticleReader from './components/ArticleReader';
 import NavAccountControl from './components/NavAccountControl';
 import Footer from './components/Footer';
 import { Book, ThemeMode } from './types';
-import { BookCatalogItem } from './constants';
+import { BookCatalogItem, loadBookById } from './constants';
 
 const App: React.FC = () => {
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
@@ -75,6 +75,28 @@ const App: React.FC = () => {
     window.history.replaceState({}, '', url.toString());
   }, []);
 
+  // The static per-book SEO pages (book-<id>.html) link back here with the
+  // book id so "Continue Reading" opens the real interactive Reader, same
+  // reasoning as openPortal/creator/article above.
+  useEffect(() => {
+    const bookId = new URLSearchParams(window.location.search).get('book');
+    if (!bookId) return;
+    handleSelectBook({
+      id: bookId,
+      title: '',
+      author: '',
+      cover: '',
+      genre: '',
+      synopsis: '',
+      publishedDate: '',
+      creatorUsername: null,
+      loadBook: () => loadBookById(bookId)
+    });
+    const url = new URL(window.location.href);
+    url.searchParams.delete('book');
+    window.history.replaceState({}, '', url.toString());
+  }, []);
+
   // Stripe Checkout redirects back here as a full page navigation (React
   // state doesn't survive the trip to checkout.stripe.com and back), so this
   // is just a one-time acknowledgment on the library view, not a return to
@@ -91,6 +113,25 @@ const App: React.FC = () => {
     }
     const url = new URL(window.location.href);
     url.searchParams.delete('tip');
+    window.history.replaceState({}, '', url.toString());
+    const timeout = setTimeout(() => setTipNotice(null), 5000);
+    return () => clearTimeout(timeout);
+  }, []);
+
+  // create-coin-checkout redirects back here the same way Stripe Checkout
+  // does for tips/purchases above - same one-time-acknowledgment reasoning.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const coins = params.get('coins');
+    if (coins === 'success') {
+      setTipNotice('OraCoins added to your wallet!');
+    } else if (coins === 'cancelled') {
+      setTipNotice('Coin purchase cancelled.');
+    } else {
+      return;
+    }
+    const url = new URL(window.location.href);
+    url.searchParams.delete('coins');
     window.history.replaceState({}, '', url.toString());
     const timeout = setTimeout(() => setTipNotice(null), 5000);
     return () => clearTimeout(timeout);
@@ -196,6 +237,7 @@ const App: React.FC = () => {
               onThemeChange={setTheme}
               onRequireSignIn={handleOpenPortal}
               onBookUpdate={setSelectedBook}
+              onOpenWallet={() => handleOpenPortal()}
             />
           </div>
         ) : showPortal ? (

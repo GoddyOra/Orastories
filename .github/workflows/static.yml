@@ -9,6 +9,13 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
+  # Content (books/articles) is published straight to Supabase, not via a
+  # git push - this nightly rebuild picks up newly published content into
+  # the static SEO pages (see scripts/generate-seo-pages.mjs) without
+  # waiting on the next code change.
+  schedule:
+    - cron: "17 6 * * *"
+
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read

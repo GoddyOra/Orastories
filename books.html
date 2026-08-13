@@ -4,7 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Orastories | Books</title>
-  <meta name="description" content="Browse the full Orastories catalog of contemporary romance novels by Goddy Ora, with synopses, genres, and free online reading.">
+  <meta name="description" content="Browse the full Orastories catalog: novels and nonfiction from a growing community of independent authors, with synopses, genres, and free online reading.">
+  <meta property="og:title" content="Orastories | Books">
+  <meta property="og:description" content="Browse the full Orastories catalog: novels and nonfiction from a growing community of independent authors, with synopses, genres, and free online reading.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://orastories.com/books">
   <link rel="icon" type="image/svg+xml" href="images/logos/orastories-logo-option-2.svg">
   <link rel="stylesheet" href="styles/tailwind.generated.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -177,8 +181,14 @@ function showToast(message, isError) {
     return data;
   }
 
-  booksGrid.innerHTML =
-    '<p class="col-span-full text-center text-sm uppercase tracking-[0.3em] text-gray-400 dark:text-gray-600">Loading catalog...</p>';
+  // The production build pre-renders real cards into #booksGrid for
+  // crawlers/first paint (see scripts/generate-seo-pages.mjs) - don't wipe
+  // that with a loading placeholder, or JS-enabled visitors would see a
+  // flash of "Loading..." replacing content that was already there.
+  if (!booksGrid.children.length) {
+    booksGrid.innerHTML =
+      '<p class="col-span-full text-center text-sm uppercase tracking-[0.3em] text-gray-400 dark:text-gray-600">Loading catalog...</p>';
+  }
 
   const {
     data: { session }
@@ -212,7 +222,10 @@ function showToast(message, isError) {
     // incorrectly show no CTA at all (the same bug this file used to have).
     if (book.price_cents == null) return '';
     const isFree = book.price_cents === 0;
-    const priceLabel = '$' + (book.price_cents / 100).toFixed(2);
+    // $0.30 processing fee passed through to the buyer on every paid
+    // purchase (not on free claims) - see PROCESSING_FEE_CENTS in
+    // create-purchase-checkout, the actual authority on what's charged.
+    const priceLabel = '$' + ((book.price_cents + 30) / 100).toFixed(2);
 
     if (!signedIn) {
       return (
@@ -257,7 +270,7 @@ function showToast(message, isError) {
         } catch (error) {
           showToast(error instanceof Error ? error.message : 'Something went wrong.', true);
           buyBtn.disabled = false;
-          buyBtn.textContent = 'Purchase Book — $' + (book.price_cents / 100).toFixed(2);
+          buyBtn.textContent = 'Purchase Book — $' + ((book.price_cents + 30) / 100).toFixed(2);
         }
       });
     }

@@ -4,8 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { getBookmark, saveBookmark } from '../lib/bookmarks';
 import { getMyReview, upsertReview } from '../lib/reviews';
 import { logRead } from '../lib/reads';
-import { createTipCheckout, getBookTipEligibility } from '../lib/creatorPayments';
-import { claimFreeBook, createPurchaseCheckout } from '../lib/purchases';
+import { tipWithCoins, getBookTipEligibility, getMyWalletBalance } from '../lib/creatorPayments';
+import { claimFreeBook, createPurchaseCheckout, PROCESSING_FEE_CENTS } from '../lib/purchases';
 import { loadBookById } from '../lib/books';
 import CommentSection from './CommentSection';
 
@@ -16,6 +16,7 @@ interface ReaderProps {
   onThemeChange: (theme: ThemeMode) => void;
   onRequireSignIn: (reason?: string) => void;
   onBookUpdate: (book: Book) => void;
+  onOpenWallet: () => void;
 }
 
 const getDeviceWidth = () => (typeof window === 'undefined' ? 1280 : window.innerWidth);
@@ -39,7 +40,7 @@ const clamp = (value: number, min: number, max: number) => Math.max(min, Math.mi
 // minutes.
 const TIP_PROMPT_THRESHOLD_SECONDS = 60 * 60;
 
-const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeChange, onRequireSignIn, onBookUpdate }) => {
+const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeChange, onRequireSignIn, onBookUpdate, onOpenWallet }) => {
   const { user, loading: authLoading } = useAuth();
   const [viewportWidth, setViewportWidth] = useState(getDeviceWidth);
   const [currentChapterIndex, setCurrentChapterIndex] = useState(0);
@@ -60,10 +61,12 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
   const [reviewSaved, setReviewSaved] = useState(false);
   const [tipEligible, setTipEligible] = useState(false);
   const [showTip, setShowTip] = useState(false);
-  const [tipAmountCents, setTipAmountCents] = useState(500);
+  const [tipAmountCoins, setTipAmountCoins] = useState(100);
   const [tipCustom, setTipCustom] = useState('');
   const [tipSubmitting, setTipSubmitting] = useState(false);
   const [tipError, setTipError] = useState<string | null>(null);
+  const [tipSuccess, setTipSuccess] = useState(false);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [showContinueGate, setShowContinueGate] = useState(false);
   const [continueSubmitting, setContinueSubmitting] = useState(false);
   const [continueError, setContinueError] = useState<string | null>(null);
@@ -205,22 +208,44 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
     return () => window.clearInterval(interval);
   }, [tipEligible]);
 
-  const handleSubmitTip = async () => {
-    const customCents = tipCustom ? Math.round(parseFloat(tipCustom) * 100) : null;
-    const amountCents = customCents ?? tipAmountCents;
+  // Loads the reader's current OraCoin balance whenever the tip modal opens,
+  // so the amount presets/insufficient-balance state reflect reality rather
+  // than a stale value from whenever the Reader first mounted.
+  useEffect(() => {
+    if (!showTip || !user) return;
+    let cancelled = false;
+    getMyWalletBalance(user.id)
+      .then((balance) => {
+        if (!cancelled) setWalletBalance(balance);
+      })
+      .catch((error) => console.error('Wallet balance load failed:', error));
+    return () => {
+      cancelled = true;
+    };
+  }, [showTip, user]);
 
-    if (!Number.isInteger(amountCents) || amountCents < 50) {
-      setTipError('Please enter an amount of at least $0.50.');
+  const handleSubmitTip = async () => {
+    const customCoins = tipCustom ? Math.round(parseFloat(tipCustom)) : null;
+    const amountCoins = customCoins ?? tipAmountCoins;
+
+    if (!Number.isInteger(amountCoins) || amountCoins < 10) {
+      setTipError('Please enter an amount of at least 10 OraCoins.');
+      return;
+    }
+    if (walletBalance !== null && amountCoins > walletBalance) {
+      setTipError('Not enough OraCoins - buy more from your account to send this tip.');
       return;
     }
 
     setTipError(null);
     setTipSubmitting(true);
     try {
-      const url = await createTipCheckout(book.id, amountCents);
-      window.location.href = url;
+      await tipWithCoins(book.id, amountCoins);
+      setWalletBalance((prev) => (prev === null ? prev : prev - amountCoins));
+      setTipSuccess(true);
     } catch (error) {
       setTipError(error instanceof Error ? error.message : 'Something went wrong. Please try again.');
+    } finally {
       setTipSubmitting(false);
     }
   };
@@ -504,6 +529,7 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
                   return;
                 }
                 setTipError(null);
+                setTipSuccess(false);
                 setShowTip(true);
               }}
               className={`p-2.5 rounded-full border backdrop-blur-md transition-colors shadow-sm ${
@@ -639,6 +665,7 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
                   return;
                 }
                 setTipError(null);
+                setTipSuccess(false);
                 setShowTip(true);
               }}
               className="text-xs uppercase tracking-[0.2em] font-bold text-[#d4af37] hover:text-white transition-colors"
@@ -662,53 +689,88 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
             className="bg-[#161616] text-white p-6 sm:p-8 md:p-10 rounded-sm shadow-2xl w-full max-w-sm border border-[#d4af37]/20"
             onClick={e => e.stopPropagation()}
           >
-            <h3 className="text-xl sm:text-2xl font-['Playfair_Display'] mb-2 text-[#d4af37] italic">Tip the Author</h3>
-            <p className="text-sm text-gray-400 mb-6 sm:mb-8">
-              Support {book.author} directly. Orastories keeps a 10% platform fee; the rest goes straight to them.
-            </p>
+            {tipSuccess ? (
+              <>
+                <h3 className="text-xl sm:text-2xl font-['Playfair_Display'] mb-2 text-[#d4af37] italic">Tip Sent</h3>
+                <p className="text-sm text-gray-400 mb-8">
+                  Thank you for supporting {book.author}. Your OraCoin balance is now {walletBalance ?? 0}.
+                </p>
+                <button
+                  onClick={() => setShowTip(false)}
+                  className="w-full py-4 border border-[#d4af37]/40 text-[#d4af37] text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-[#d4af37] hover:text-black transition-all"
+                >
+                  Done
+                </button>
+              </>
+            ) : (
+              <>
+                <h3 className="text-xl sm:text-2xl font-['Playfair_Display'] mb-2 text-[#d4af37] italic">Tip the Author</h3>
+                <p className="text-sm text-gray-400 mb-2">
+                  Support {book.author} directly with OraCoins. Orastories keeps a 10% platform fee; the rest goes straight to them.
+                </p>
+                <p className="text-xs text-gray-500 mb-6 sm:mb-8">
+                  Your balance: <span className="text-[#d4af37]">{walletBalance ?? '...'} OraCoins</span>
+                </p>
 
-            <div className="space-y-6 sm:space-y-8">
-              <div>
-                <label className="block text-[10px] uppercase tracking-[0.2em] text-gray-500 mb-4">Amount</label>
-                <div className="flex gap-2">
-                  {[300, 500, 1000, 2000].map((cents) => (
-                    <button
-                      key={cents}
-                      onClick={() => {
-                        setTipAmountCents(cents);
-                        setTipCustom('');
-                      }}
-                      className={`flex-1 py-3 rounded-sm border text-sm transition-all ${
-                        !tipCustom && tipAmountCents === cents
-                          ? 'border-[#d4af37] text-[#d4af37]'
-                          : 'border-white/15 text-gray-300 hover:border-white/30'
-                      }`}
-                    >
-                      ${(cents / 100).toFixed(0)}
-                    </button>
-                  ))}
+                <div className="space-y-6 sm:space-y-8">
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-[0.2em] text-gray-500 mb-4">Amount (OraCoins)</label>
+                    <div className="flex gap-2">
+                      {[100, 250, 500, 1000].map((coins) => (
+                        <button
+                          key={coins}
+                          onClick={() => {
+                            setTipAmountCoins(coins);
+                            setTipCustom('');
+                          }}
+                          className={`flex-1 py-3 rounded-sm border text-sm transition-all ${
+                            !tipCustom && tipAmountCoins === coins
+                              ? 'border-[#d4af37] text-[#d4af37]'
+                              : 'border-white/15 text-gray-300 hover:border-white/30'
+                          }`}
+                        >
+                          {coins}
+                        </button>
+                      ))}
+                    </div>
+                    <input
+                      type="number"
+                      min="10"
+                      step="1"
+                      value={tipCustom}
+                      onChange={(e) => setTipCustom(e.target.value)}
+                      placeholder="Custom amount"
+                      className="mt-3 w-full px-4 py-3 rounded-sm border border-white/15 bg-[#0f0f0f] text-white text-sm focus:outline-none focus:border-[#d4af37]"
+                    />
+                  </div>
+
+                  {tipError && (
+                    <div>
+                      <p className="text-sm text-red-500">{tipError}</p>
+                      {walletBalance !== null && (tipCustom ? Math.round(parseFloat(tipCustom)) : tipAmountCoins) > walletBalance && (
+                        <button
+                          onClick={() => {
+                            setShowTip(false);
+                            onOpenWallet();
+                          }}
+                          className="mt-2 text-xs uppercase tracking-[0.2em] font-bold text-[#d4af37] hover:text-white transition-colors"
+                        >
+                          Buy More OraCoins
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleSubmitTip}
+                    disabled={tipSubmitting}
+                    className="w-full py-4 border border-[#d4af37]/40 text-[#d4af37] text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-[#d4af37] hover:text-black transition-all disabled:opacity-40"
+                  >
+                    {tipSubmitting ? 'Sending...' : 'Tip with OraCoins'}
+                  </button>
                 </div>
-                <input
-                  type="number"
-                  min="0.50"
-                  step="0.01"
-                  value={tipCustom}
-                  onChange={(e) => setTipCustom(e.target.value)}
-                  placeholder="Custom amount"
-                  className="mt-3 w-full px-4 py-3 rounded-sm border border-white/15 bg-[#0f0f0f] text-white text-sm focus:outline-none focus:border-[#d4af37]"
-                />
-              </div>
-
-              {tipError && <p className="text-sm text-red-500">{tipError}</p>}
-
-              <button
-                onClick={handleSubmitTip}
-                disabled={tipSubmitting}
-                className="w-full py-4 border border-[#d4af37]/40 text-[#d4af37] text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-[#d4af37] hover:text-black transition-all disabled:opacity-40"
-              >
-                {tipSubmitting ? 'Redirecting...' : 'Continue to Payment'}
-              </button>
-            </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -738,8 +800,11 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
             ) : book.priceCents && book.priceCents >= 50 ? (
               <>
                 <h3 className="text-xl sm:text-2xl font-['Playfair_Display'] mb-2 text-[#d4af37] italic">Continue Reading</h3>
-                <p className="text-sm text-gray-400 mb-6 sm:mb-8">
+                <p className="text-sm text-gray-400 mb-2">
                   You've reached the end of the free preview. Buy the full PDF edition to keep reading.
+                </p>
+                <p className="text-xs text-gray-500 mb-6 sm:mb-8">
+                  ${(book.priceCents / 100).toFixed(2)} + ${(PROCESSING_FEE_CENTS / 100).toFixed(2)} processing fee
                 </p>
                 {continueError && <p className="text-sm text-red-500 mb-4">{continueError}</p>}
                 <button
@@ -747,7 +812,9 @@ const Reader: React.FC<ReaderProps> = ({ book, onClose, externalTheme, onThemeCh
                   disabled={continueSubmitting}
                   className="w-full py-4 border border-[#d4af37]/40 text-[#d4af37] text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-[#d4af37] hover:text-black transition-all disabled:opacity-40"
                 >
-                  {continueSubmitting ? 'Redirecting...' : `Buy to Continue — $${(book.priceCents / 100).toFixed(2)}`}
+                  {continueSubmitting
+                    ? 'Redirecting...'
+                    : `Buy to Continue — $${((book.priceCents + PROCESSING_FEE_CENTS) / 100).toFixed(2)}`}
                 </button>
               </>
             ) : (

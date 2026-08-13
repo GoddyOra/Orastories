@@ -598,3 +598,195 @@ alter table contact_messages enable row level security;
 create policy "anyone sends a contact message" on contact_messages
   for insert to anon, authenticated
   with check (sender_id is null or sender_id = auth.uid());
+
+-- Phase K: OraCoins - prepaid wallet tipping. Every tip today is a live
+-- Stripe charge (2.9%+30c on a $1 tip is ~a third of it gone in fees, and
+-- every tip is a fresh card charge a fraudster could use to test stolen
+-- cards). Readers now buy OraCoins in fixed packs - one normal, low-risk
+-- charge - then spend coins on tips with zero further Stripe involvement.
+-- Book purchases are unchanged (still direct card charges).
+--
+-- A dedicated table rather than a profiles column: profiles is publicly
+-- readable by row with privacy enforced via column-level grants (see
+-- above), and coin_balance has no legitimate public-read case at all, so it
+-- gets ordinary row-level RLS instead of retrofitting the grant exception.
+create table wallets (
+  user_id uuid primary key references profiles(id) on delete cascade,
+  coin_balance int not null default 0 check (coin_balance >= 0),
+  updated_at timestamptz not null default now()
+);
+alter table wallets enable row level security;
+create policy "users view their own wallet" on wallets
+  for select using (auth.uid() = user_id);
+-- No insert/update policy for authenticated - balance only ever changes via
+-- the security definer functions below, called by the webhook (service
+-- role) or by the caller acting on their own row only (spend_coins_for_tip).
+
+create table coin_purchases (
+  id uuid primary key default gen_random_uuid(),
+  buyer_id uuid not null references profiles(id) on delete cascade,
+  pack_id text not null,
+  amount_cents int not null,
+  coins_credited int not null,
+  stripe_checkout_session_id text unique,
+  stripe_payment_intent_id text,
+  status text not null default 'pending' check (status in ('pending', 'succeeded', 'failed')),
+  ip_address text,
+  created_at timestamptz not null default now()
+);
+alter table coin_purchases enable row level security;
+create policy "users view their own coin purchases" on coin_purchases
+  for select using (auth.uid() = buyer_id);
+-- No insert/update policy: same reasoning as tips/purchases - only the
+-- create-coin-checkout and stripe-webhook Edge Functions (service role)
+-- ever write here.
+
+alter table purchases add column if not exists ip_address text;
+
+-- Tips are now always coin-funded going forward; funded_by keeps the
+-- historical 'card' rows distinguishable from new 'coins' ones.
+alter table tips add column if not exists funded_by text not null default 'card' check (funded_by in ('card', 'coins'));
+
+-- Every coin-tip is held_for_creator=true unconditionally (see
+-- spend_coins_for_tip below) rather than settled instantly via
+-- transfer_data, so both tips and purchases need a way to mark "this row's
+-- money has already been swept into a real Stripe transfer" - payout_id
+-- null means still outstanding.
+alter table tips add column if not exists payout_id uuid references payouts(id) on delete set null;
+alter table purchases add column if not exists payout_id uuid references payouts(id) on delete set null;
+alter table payouts add column if not exists status text not null default 'pending' check (status in ('pending', 'paid', 'failed'));
+
+-- Buyer-facing $0.30 processing-fee passthrough on book purchases (not coin
+-- packs - a $10+ pack already amortizes 30c down to a few percent, the
+-- exact problem OraCoins exists to avoid reintroducing). Tracked separately
+-- from amount_cents, which keeps meaning "book price" everywhere else,
+-- including the payout sweep below - the passthrough fee is never owed to
+-- or split with the creator.
+alter table purchases add column if not exists processing_fee_cents int not null default 0;
+
+-- credit_coin_purchase: called once by stripe-webhook per successful
+-- checkout.session.completed for a coin pack. Locks the row and no-ops if
+-- it's already succeeded, so a retried/duplicate webhook delivery (a real
+-- possibility on the live internet, unlike the sandbox) can never
+-- double-credit a wallet.
+create function credit_coin_purchase(p_purchase_id uuid, p_payment_intent_id text) returns void as $$
+declare
+  v_buyer_id uuid;
+  v_coins int;
+  v_status text;
+begin
+  select buyer_id, coins_credited, status into v_buyer_id, v_coins, v_status
+    from coin_purchases where id = p_purchase_id for update;
+
+  if v_buyer_id is null then
+    raise exception 'coin_purchases row not found: %', p_purchase_id;
+  end if;
+
+  if v_status = 'succeeded' then
+    return;
+  end if;
+
+  update coin_purchases set status = 'succeeded', stripe_payment_intent_id = p_payment_intent_id
+    where id = p_purchase_id;
+
+  insert into wallets (user_id, coin_balance) values (v_buyer_id, v_coins)
+    on conflict (user_id) do update set coin_balance = wallets.coin_balance + excluded.coin_balance, updated_at = now();
+end;
+$$ language plpgsql security definer;
+
+-- spend_coins_for_tip: the entire coin-tip mechanism. Derives the spender
+-- from auth.uid() internally - never a client-supplied user id, which would
+-- let one account drain another's wallet - and does the balance check and
+-- decrement as a single atomic UPDATE ... WHERE coin_balance >= amount, the
+-- standard race-safe pattern (two concurrent spends can't both succeed
+-- against a balance that only covers one of them). Safe to call directly
+-- from the client via supabase.rpc(): it only ever touches the caller's own
+-- row and makes no Stripe call at all.
+create function spend_coins_for_tip(p_book_id text, p_amount_coins int) returns uuid as $$
+declare
+  v_reader_id uuid := auth.uid();
+  v_creator_id uuid;
+  v_new_balance int;
+  v_platform_fee int;
+  v_tip_id uuid;
+begin
+  if v_reader_id is null then
+    raise exception 'Not signed in';
+  end if;
+  if p_amount_coins is null or p_amount_coins <= 0 then
+    raise exception 'Amount must be positive';
+  end if;
+
+  select creator_id into v_creator_id from books where id = p_book_id;
+  if v_creator_id is null then
+    raise exception 'Book not found';
+  end if;
+
+  update wallets set coin_balance = coin_balance - p_amount_coins, updated_at = now()
+    where user_id = v_reader_id and coin_balance >= p_amount_coins
+    returning coin_balance into v_new_balance;
+
+  if v_new_balance is null then
+    raise exception 'Insufficient OraCoin balance';
+  end if;
+
+  v_platform_fee := round(p_amount_coins * 0.1);
+
+  insert into tips (book_id, creator_id, reader_id, amount_cents, platform_fee_cents, status, held_for_creator, funded_by)
+  values (p_book_id, v_creator_id, v_reader_id, p_amount_coins, v_platform_fee, 'succeeded', true, 'coins')
+  returning id into v_tip_id;
+
+  return v_tip_id;
+end;
+$$ language plpgsql security definer;
+
+-- No prior direct-RPC-from-client precedent exists elsewhere in this
+-- schema (everything else goes through Edge Functions), so this is made
+-- explicit rather than assumed: only spend_coins_for_tip is ever called
+-- directly by a signed-in reader's own client, and only it needs this.
+-- credit_coin_purchase/claim_creator_payout are only ever called by the
+-- service-role client inside Edge Functions, which bypasses grants entirely.
+grant execute on function spend_coins_for_tip(text, int) to authenticated;
+
+-- claim_creator_payout: called by the sweep-creator-payouts Edge Function
+-- (service role, on a daily schedule). Locks and sums every unswept
+-- (held_for_creator=true, payout_id is null) net-owed row across tips and
+-- purchases for one creator; if under threshold, no-ops; otherwise creates
+-- the payouts row and stamps payout_id on every claimed row in the same
+-- transaction, so a retried/overlapping sweep run can never double-claim
+-- the same earnings into two separate transfers.
+create function claim_creator_payout(p_creator_id uuid, p_min_cents int) returns table(payout_id uuid, amount_cents int) as $$
+declare
+  v_amount int;
+  v_payout_id uuid;
+begin
+  select coalesce(sum(t.amount_cents - t.platform_fee_cents), 0) into v_amount
+    from tips t
+    where t.creator_id = p_creator_id and t.status = 'succeeded' and t.held_for_creator = true and t.payout_id is null;
+
+  v_amount := v_amount + coalesce((
+    select sum(p.amount_cents - p.platform_fee_cents)
+    from purchases p join books b on b.id = p.book_id
+    where b.creator_id = p_creator_id and p.status = 'succeeded' and p.held_for_creator = true and p.payout_id is null
+  ), 0);
+
+  if v_amount < p_min_cents then
+    return;
+  end if;
+
+  insert into payouts (creator_id, period_start, period_end, amount_cents)
+  values (p_creator_id, now(), now(), v_amount)
+  returning id into v_payout_id;
+
+  update tips set payout_id = v_payout_id
+    where creator_id = p_creator_id and status = 'succeeded' and held_for_creator = true and payout_id is null;
+
+  update purchases set payout_id = v_payout_id
+    where book_id in (select id from books where creator_id = p_creator_id)
+      and status = 'succeeded' and held_for_creator = true and payout_id is null;
+
+  payout_id := v_payout_id;
+  amount_cents := v_amount;
+  return next;
+end;
+$$ language plpgsql security definer;

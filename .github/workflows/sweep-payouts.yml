@@ -1,0 +1,30 @@
+# Coin-tips (and any other held_for_creator earnings) never settle
+# instantly - see spend_coins_for_tip / claim_creator_payout in
+# db/schema.sql. This calls the sweep-creator-payouts Edge Function once a
+# day so creators actually get paid once they cross the $20 threshold,
+# without needing a code push to trigger it (mirrors the nightly SEO-rebuild
+# cron in static.yml, which exists for the same "content changes without a
+# git push" reason).
+name: Sweep creator payouts
+
+on:
+  schedule:
+    - cron: "43 7 * * *"
+  workflow_dispatch:
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call sweep-creator-payouts
+        run: |
+          response=$(curl -sS -o response.json -w "%{http_code}" -X POST \
+            "${{ secrets.SUPABASE_URL }}/functions/v1/sweep-creator-payouts" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}")
+          echo "HTTP status: $response"
+          cat response.json
+          if [ "$response" -ge 300 ]; then
+            echo "Sweep failed"
+            exit 1
+          fi

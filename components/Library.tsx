@@ -1,8 +1,29 @@
 import React, { useEffect, useState } from 'react';
 import { ThemeMode } from '../types';
-import { BookCatalogItem, fetchBookCatalog } from '../constants';
+import { BookCatalogItem, fetchBookCatalog, loadBookById } from '../constants';
 import { BookRatingSummary, getBookRatings } from '../lib/reviews';
 import BookCard from './BookCard';
+
+// scripts/generate-seo-pages.mjs embeds the published catalog as JSON in
+// index.html at build time so crawlers without JS see real content
+// immediately. index.tsx mounts with createRoot (not hydrateRoot), so React
+// fully replaces #root's pre-rendered HTML on first render regardless -
+// seeding this component's initial state from the same JSON means that
+// first render already shows the real cards instead of the loading
+// skeleton, so a JS-enabled visitor never sees a flash between the two. The
+// live fetch below still always runs afterward to reconcile with anything
+// published since the last deploy.
+function readEmbeddedCatalog(): BookCatalogItem[] {
+  if (typeof document === 'undefined') return [];
+  const node = document.getElementById('ssg-books-data');
+  if (!node?.textContent) return [];
+  try {
+    const rows = JSON.parse(node.textContent) as Array<Omit<BookCatalogItem, 'loadBook'>>;
+    return rows.map((row) => ({ ...row, loadBook: () => loadBookById(row.id) }));
+  } catch {
+    return [];
+  }
+}
 
 interface LibraryProps {
   onSelectBook: (book: BookCatalogItem) => void;
@@ -12,8 +33,9 @@ interface LibraryProps {
 
 const Library: React.FC<LibraryProps> = ({ onSelectBook, onSelectCreator, theme }) => {
   const isLight = theme === 'light';
-  const [books, setBooks] = useState<BookCatalogItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [embeddedCatalog] = useState<BookCatalogItem[]>(readEmbeddedCatalog);
+  const [books, setBooks] = useState<BookCatalogItem[]>(embeddedCatalog);
+  const [isLoading, setIsLoading] = useState(embeddedCatalog.length === 0);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [ratings, setRatings] = useState<Record<string, BookRatingSummary>>({});
 

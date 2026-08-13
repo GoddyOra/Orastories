@@ -2,10 +2,16 @@ import { stripe } from '../_shared/stripe.ts';
 import { supabaseAdmin } from '../_shared/supabaseAdmin.ts';
 import { getUserClient } from '../_shared/supabaseUser.ts';
 import { corsHeaders } from '../_shared/cors.ts';
+import { assertUnderDailyLimit, getClientIp } from '../_shared/rateLimit.ts';
 
-// Same commission as tipping - keep in sync with create-tip-checkout.
+// Same commission as the old card-tip flow.
 const PLATFORM_FEE_RATE = 0.1;
 const MIN_AMOUNT_CENTS = 50; // Stripe's USD charge minimum
+
+// Passed through to the buyer as its own itemized line, never split with or
+// owed to the creator - see processing_fee_cents in db/schema.sql. Not
+// applied to coin packs, which already amortize this down to a few percent.
+const PROCESSING_FEE_CENTS = 30;
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -63,6 +69,8 @@ Deno.serve(async (req: Request) => {
     if (filesError) throw filesError;
     if (!files || files.length === 0) throw new Error("This book's file isn't ready yet.");
 
+    await assertUnderDailyLimit(buyerId, getClientIp(req));
+
     const amountCents = book.price_cents;
     const platformFeeCents = Math.round(amountCents * PLATFORM_FEE_RATE);
 
@@ -73,8 +81,10 @@ Deno.serve(async (req: Request) => {
         buyer_id: buyerId,
         amount_cents: amountCents,
         platform_fee_cents: platformFeeCents,
+        processing_fee_cents: PROCESSING_FEE_CENTS,
         status: 'pending',
-        held_for_creator: !isConnected
+        held_for_creator: !isConnected,
+        ip_address: getClientIp(req)
       })
       .select('id')
       .single();
@@ -90,11 +100,23 @@ Deno.serve(async (req: Request) => {
             unit_amount: amountCents
           },
           quantity: 1
+        },
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: { name: 'Processing Fee' },
+            unit_amount: PROCESSING_FEE_CENTS
+          },
+          quantity: 1
         }
       ],
+      // The processing fee is on top of the platform's normal cut, never
+      // split with the creator - transfer_data still sends them exactly
+      // amount_cents - platform_fee_cents, unchanged from before this fee
+      // existed.
       payment_intent_data: isConnected
         ? {
-            application_fee_amount: platformFeeCents,
+            application_fee_amount: platformFeeCents + PROCESSING_FEE_CENTS,
             transfer_data: { destination: creatorProfile!.stripe_account_id! },
             metadata: { purchase_id: purchaseRow.id }
           }

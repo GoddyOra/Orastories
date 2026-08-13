@@ -49,12 +49,15 @@ Deno.serve(async (req: Request) => {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as {
-          metadata?: { tip_id?: string; purchase_id?: string };
+          metadata?: { tip_id?: string; purchase_id?: string; coin_purchase_id?: string };
           payment_intent?: string | null;
         };
         const tipId = session.metadata?.tip_id;
         const purchaseId = session.metadata?.purchase_id;
+        const coinPurchaseId = session.metadata?.coin_purchase_id;
         if (tipId) {
+          // Legacy path - create-tip-checkout no longer creates new sessions,
+          // but historical in-flight ones may still complete.
           const { error } = await supabaseAdmin
             .from('tips')
             .update({
@@ -71,6 +74,15 @@ Deno.serve(async (req: Request) => {
               stripe_payment_intent_id: session.payment_intent ?? null
             })
             .eq('id', purchaseId);
+          if (error) throw error;
+        } else if (coinPurchaseId) {
+          // credit_coin_purchase is the sole authority for crediting a
+          // wallet - it locks the row and no-ops if already succeeded, so a
+          // retried webhook delivery can never double-credit.
+          const { error } = await supabaseAdmin.rpc('credit_coin_purchase', {
+            p_purchase_id: coinPurchaseId,
+            p_payment_intent_id: session.payment_intent ?? null
+          });
           if (error) throw error;
         }
         break;

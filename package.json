@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build:css": "tailwindcss -i ./styles/tailwind.css -o ./styles/tailwind.generated.css --minify",
-    "build": "npm run build:css && vite build && node ./scripts/copy-static-pages.mjs",
+    "build": "npm run build:css && vite build && node ./scripts/copy-static-pages.mjs && node ./scripts/generate-seo-pages.mjs",
     "preview": "vite preview",
     "upload:originals": "node ./scripts/upload_originals.js"
   },

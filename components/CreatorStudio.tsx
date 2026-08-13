@@ -1,7 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { ThemeMode } from '../types';
 import { CreatorBook, createBook, listMyBooks } from '../lib/creatorBooks';
-import { startStripeOnboarding, syncStripeOnboardingStatus } from '../lib/creatorPayments';
+import {
+  startStripeOnboarding,
+  syncStripeOnboardingStatus,
+  listMyPayouts,
+  getMyPendingPayoutCents,
+  CreatorPayout
+} from '../lib/creatorPayments';
 import { useAuth } from '../contexts/AuthContext';
 import BookEditor from './BookEditor';
 
@@ -33,6 +39,20 @@ const CreatorStudio: React.FC<CreatorStudioProps> = ({ theme, creatorId, onSelec
   const [connecting, setConnecting] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
   const [syncingStripe, setSyncingStripe] = useState(false);
+
+  const [payouts, setPayouts] = useState<CreatorPayout[]>([]);
+  const [pendingCents, setPendingCents] = useState(0);
+  const [payoutsLoading, setPayoutsLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([listMyPayouts(creatorId), getMyPendingPayoutCents(creatorId)])
+      .then(([payoutRows, pending]) => {
+        setPayouts(payoutRows);
+        setPendingCents(pending);
+      })
+      .catch((error) => console.error('Failed to load payouts:', error))
+      .finally(() => setPayoutsLoading(false));
+  }, [creatorId]);
 
   const loadBooks = () => {
     setLoading(true);
@@ -174,6 +194,38 @@ const CreatorStudio: React.FC<CreatorStudioProps> = ({ theme, creatorId, onSelec
               {connecting ? 'Redirecting...' : 'Connect Stripe'}
             </button>
           </>
+        )}
+      </div>
+
+      <div className={`rounded-sm border p-6 mb-8 ${cardCls}`}>
+        <h3 className={`text-xs uppercase tracking-[0.3em] mb-3 ${textMuted}`}>Payouts</h3>
+        <p className={`text-sm mb-4 ${textMuted}`}>
+          Pending, not yet paid out: <span className="font-semibold text-amber-700">${(pendingCents / 100).toFixed(2)}</span>
+          {' '}(paid out automatically once your total reaches $20)
+        </p>
+        {payoutsLoading ? (
+          <p className={`text-sm ${textMuted}`}>Loading payout history...</p>
+        ) : payouts.length === 0 ? (
+          <p className={`text-sm ${textMuted}`}>No payouts yet.</p>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className={`text-left text-[10px] uppercase tracking-[0.15em] ${textMuted}`}>
+                <th className="pb-2">Date</th>
+                <th className="pb-2">Amount</th>
+                <th className="pb-2">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {payouts.map((payout) => (
+                <tr key={payout.id} className="border-t border-current/10">
+                  <td className="py-2">{new Date(payout.periodEnd).toLocaleDateString()}</td>
+                  <td className="py-2">${(payout.amountCents / 100).toFixed(2)}</td>
+                  <td className="py-2 capitalize">{payout.status}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
 

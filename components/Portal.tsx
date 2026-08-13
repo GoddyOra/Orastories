@@ -7,7 +7,9 @@ import { PurchasedBook, listMyPurchasesWithBooks } from '../lib/purchases';
 import { isUsernameAvailable, claimUsername, USERNAME_PATTERN } from '../lib/username';
 import { updateBio } from '../lib/auth';
 import { getMyApplication, submitCreatorApplication } from '../lib/creatorApplications';
+import { getMyWalletBalance } from '../lib/creatorPayments';
 import { CreatorApplication, ThemeMode } from '../types';
+import Wallet from './Wallet';
 
 // Lazy-loaded: pulls in mammoth (DOCX parsing) which meaningfully bloats
 // the bundle. Code-split so only creators who open "My Books" download it.
@@ -63,6 +65,7 @@ const Portal: React.FC<PortalProps> = ({ theme, reason, onSelectBook, onSelectCr
   const [reviews, setReviews] = useState<MyReviewWithBook[]>([]);
   const [purchases, setPurchases] = useState<PurchasedBook[]>([]);
   const [application, setApplication] = useState<CreatorApplication | null>(null);
+  const [walletBalance, setWalletBalance] = useState(0);
   const [dashboardLoading, setDashboardLoading] = useState(false);
 
   const [applyMessage, setApplyMessage] = useState('');
@@ -78,14 +81,16 @@ const Portal: React.FC<PortalProps> = ({ theme, reason, onSelectBook, onSelectCr
       listBookmarksWithBooks(user.id),
       listMyReviews(user.id),
       listMyPurchasesWithBooks(user.id),
-      getMyApplication(user.id)
+      getMyApplication(user.id),
+      getMyWalletBalance(user.id)
     ])
-      .then(([bookmarkRows, reviewRows, purchaseRows, applicationRow]) => {
+      .then(([bookmarkRows, reviewRows, purchaseRows, applicationRow, balance]) => {
         if (cancelled) return;
         setBookmarks(bookmarkRows);
         setReviews(reviewRows);
         setPurchases(purchaseRows);
         setApplication(applicationRow);
+        setWalletBalance(balance);
       })
       .catch((error) => console.error('Portal dashboard load failed:', error))
       .finally(() => {
@@ -427,6 +432,7 @@ const Portal: React.FC<PortalProps> = ({ theme, reason, onSelectBook, onSelectCr
               <p className={`text-sm ${textMuted}`}>Loading your library...</p>
             ) : (
               <>
+                <Wallet isLight={isLight} balance={walletBalance} />
                 <section className="mb-14">
                   <h2 className={`text-xs uppercase tracking-[0.3em] mb-5 ${textMuted}`}>Continue Reading</h2>
                   {bookmarks.length === 0 ? (

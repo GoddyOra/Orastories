@@ -2,6 +2,12 @@ import { supabase } from './supabaseClient';
 
 const PDF_BUCKET = 'book-pdfs';
 
+// Display-only mirror of PROCESSING_FEE_CENTS in
+// supabase/functions/create-purchase-checkout/index.ts - the server is the
+// price authority (it adds the actual second Checkout line item); this is
+// just so the UI can show the true total before the reader gets there.
+export const PROCESSING_FEE_CENTS = 30;
+
 async function invoke<T>(name: string, body: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.functions.invoke(name, { body });
   if (error) throw error;
