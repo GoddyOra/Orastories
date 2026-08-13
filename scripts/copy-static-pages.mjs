@@ -16,7 +16,9 @@ const staticPages = [
   'blog-writing-101-profitable-writer-2026.html',
   'books.html',
   'reviews.html',
-  'contact.html'
+  'contact.html',
+  'privacy.html',
+  'terms.html'
 ];
 
 const copyStaticPages = async () => {

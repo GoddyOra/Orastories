@@ -49,7 +49,7 @@ const BookCard: React.FC<BookCardProps> = ({
     <div className="group relative cursor-pointer w-full max-w-sm" onClick={() => onSelectBook(book)}>
       {/* Elegant Book Cover */}
       <div
-        className={`relative aspect-[2/3] overflow-hidden rounded-sm transition-all duration-700 group-hover:-translate-y-6 ${
+        className={`relative aspect-[2/3] overflow-hidden rounded-sm transition-transform duration-700 group-hover:-translate-y-6 ${
           isLight
             ? 'shadow-[0_20px_40px_rgba(0,0,0,0.1)] group-hover:shadow-[0_40px_60px_rgba(0,0,0,0.15)]'
             : 'shadow-[0_20px_50px_rgba(0,0,0,0.8)] group-hover:shadow-[0_40px_80px_rgba(212,175,55,0.15)]'
@@ -62,10 +62,10 @@ const BookCard: React.FC<BookCardProps> = ({
           height={750}
           loading={priority ? 'eager' : 'lazy'}
           fetchPriority={priority ? 'high' : undefined}
-          className="w-full h-full object-cover grayscale-[0.2] transition-all duration-1000 group-hover:scale-105 group-hover:grayscale-0"
+          className="w-full h-full object-cover grayscale-[0.2] transition-transform duration-1000 group-hover:scale-105 group-hover:grayscale-0"
         />
         {/* Synopsis Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col justify-end p-6 sm:p-8 md:p-10">
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-6 sm:p-8 md:p-10">
           <p className="text-[#d4af37] text-[10px] mb-3 tracking-[0.3em] uppercase font-bold">{book.genre}</p>
           <p className="text-2xl md:text-3xl font-['Playfair_Display'] mb-4 italic leading-tight text-white">{book.title}</p>
           <p className="text-sm text-gray-300 line-clamp-3 font-light leading-relaxed mb-8">{book.synopsis}</p>
@@ -101,15 +101,17 @@ const BookCard: React.FC<BookCardProps> = ({
             </>
           )}
         </p>
-        {rating && (
-          <p className={`text-xs mt-3 tracking-wide ${isLight ? 'text-gray-600' : 'text-gray-400'}`}>
-            <span className="text-amber-600">
-              {'★'.repeat(Math.round(rating.averageRating))}
-              {'☆'.repeat(5 - Math.round(rating.averageRating))}
-            </span>{' '}
-            {rating.averageRating.toFixed(1)} ({rating.reviewCount} review{rating.reviewCount === 1 ? '' : 's'})
-          </p>
-        )}
+        <p className={`text-xs mt-3 tracking-wide min-h-[1rem] ${isLight ? 'text-gray-600' : 'text-gray-400'}`}>
+          {rating && (
+            <>
+              <span className="text-amber-600">
+                {'★'.repeat(Math.round(rating.averageRating))}
+                {'☆'.repeat(5 - Math.round(rating.averageRating))}
+              </span>{' '}
+              {rating.averageRating.toFixed(1)} ({rating.reviewCount} review{rating.reviewCount === 1 ? '' : 's'})
+            </>
+          )}
+        </p>
       </div>
     </div>
   );

@@ -14,6 +14,11 @@ const Footer: React.FC<FooterProps> = ({ theme }) => {
       }`}
     >
       <p>&copy; 2026 Orastories. All rights reserved.</p>
+      <p className="mt-2 text-sm">
+        <a href="/privacy" className={`transition-colors ${isLight ? 'hover:text-amber-700' : 'hover:text-amber-400'}`}>Privacy Policy</a>
+        {' '}&middot;{' '}
+        <a href="/terms" className={`transition-colors ${isLight ? 'hover:text-amber-700' : 'hover:text-amber-400'}`}>Terms of Service</a>
+      </p>
     </footer>
   );
 };
