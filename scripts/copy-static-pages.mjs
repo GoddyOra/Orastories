@@ -18,7 +18,8 @@ const staticPages = [
   'reviews.html',
   'contact.html',
   'privacy.html',
-  'terms.html'
+  'terms.html',
+  'search.html'
 ];
 
 const copyStaticPages = async () => {

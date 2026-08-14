@@ -169,7 +169,7 @@ grant update (username, display_name) on profiles to authenticated;
 -- visitor via the policy above. stripe_payouts_enabled stays public since the
 -- reader-facing UI needs it to decide whether to show a book's tip button.
 revoke select on profiles from authenticated, anon;
-grant select (id, role, display_name, username, bio, created_at, stripe_payouts_enabled) on profiles to authenticated, anon;
+grant select (id, role, display_name, username, bio, created_at, stripe_payouts_enabled, search_vector) on profiles to authenticated, anon;
 
 create policy "users view their own application" on creator_applications
   for select using (auth.uid() = user_id);
@@ -790,3 +790,343 @@ begin
   return next;
 end;
 $$ language plpgsql security definer;
+
+-- ---------------------------------------------------------------------------
+-- Phase N — global slug registry
+--
+-- Books, articles, and usernames now all get bare root-level URLs
+-- (orastories.com/{book-slug}, /{article-slug}, /{username}), which means
+-- all three - plus the site's own static page names - share one flat
+-- namespace and must never collide. This table is the single source of
+-- truth for that: its primary key is what actually enforces cross-table
+-- uniqueness, kept in sync by the triggers below. createBook()/createArticle()
+-- (lib/creatorBooks.ts, lib/articles.ts) and claimUsername() (lib/username.ts)
+-- already catch Postgres error 23505 (unique_violation) and show a friendly
+-- "already taken" message - a registry conflict surfaces through that exact
+-- same path with zero app-code changes needed.
+-- ---------------------------------------------------------------------------
+
+create table if not exists slug_registry (
+  slug text primary key,
+  kind text not null check (kind in ('book', 'article', 'profile', 'reserved')),
+  created_at timestamptz not null default now()
+);
+
+alter table slug_registry enable row level security;
+
+drop policy if exists "slug registry is publicly viewable" on slug_registry;
+create policy "slug registry is publicly viewable" on slug_registry for select using (true);
+grant select on slug_registry to anon, authenticated;
+
+-- Reserved words: the site's own static pages/paths, never claimable by a
+-- book, article, or username.
+insert into slug_registry (slug, kind) values
+  ('books', 'reserved'), ('blog', 'reserved'), ('reviews', 'reserved'), ('contact', 'reserved'),
+  ('about', 'reserved'), ('privacy', 'reserved'), ('terms', 'reserved'), ('admin', 'reserved'),
+  ('api', 'reserved'), ('index', 'reserved'), ('images', 'reserved'), ('styles', 'reserved'),
+  ('scripts', 'reserved'), ('assets', 'reserved'), ('signin', 'reserved'), ('login', 'reserved'),
+  ('signup', 'reserved')
+on conflict (slug) do nothing;
+
+-- Backfill existing content.
+insert into slug_registry (slug, kind) select id, 'book' from books
+  on conflict (slug) do nothing;
+insert into slug_registry (slug, kind) select slug, 'article' from articles
+  on conflict (slug) do nothing;
+insert into slug_registry (slug, kind) select username, 'profile' from profiles where username is not null
+  on conflict (slug) do nothing;
+
+create or replace function sync_book_slug_registry() returns trigger as $$
+begin
+  if tg_op = 'UPDATE' then
+    if old.id is not distinct from new.id then
+      return new;
+    end if;
+    delete from slug_registry where slug = old.id and kind = 'book';
+  end if;
+  insert into slug_registry (slug, kind) values (new.id, 'book');
+  return new;
+end;
+$$ language plpgsql security definer;
+
+drop trigger if exists books_sync_slug_registry on books;
+create trigger books_sync_slug_registry after insert or update of id on books
+for each row execute function sync_book_slug_registry();
+
+create or replace function release_book_slug_registry() returns trigger as $$
+begin
+  delete from slug_registry where slug = old.id and kind = 'book';
+  return old;
+end;
+$$ language plpgsql security definer;
+
+drop trigger if exists books_release_slug_registry on books;
+create trigger books_release_slug_registry after delete on books
+for each row execute function release_book_slug_registry();
+
+create or replace function sync_article_slug_registry() returns trigger as $$
+begin
+  if tg_op = 'UPDATE' then
+    if old.slug is not distinct from new.slug then
+      return new;
+    end if;
+    delete from slug_registry where slug = old.slug and kind = 'article';
+  end if;
+  insert into slug_registry (slug, kind) values (new.slug, 'article');
+  return new;
+end;
+$$ language plpgsql security definer;
+
+drop trigger if exists articles_sync_slug_registry on articles;
+create trigger articles_sync_slug_registry after insert or update of slug on articles
+for each row execute function sync_article_slug_registry();
+
+create or replace function release_article_slug_registry() returns trigger as $$
+begin
+  delete from slug_registry where slug = old.slug and kind = 'article';
+  return old;
+end;
+$$ language plpgsql security definer;
+
+drop trigger if exists articles_release_slug_registry on articles;
+create trigger articles_release_slug_registry after delete on articles
+for each row execute function release_article_slug_registry();
+
+create or replace function sync_profile_slug_registry() returns trigger as $$
+begin
+  if old.username is not distinct from new.username then
+    return new;
+  end if;
+  if old.username is not null then
+    delete from slug_registry where slug = old.username and kind = 'profile';
+  end if;
+  if new.username is not null then
+    insert into slug_registry (slug, kind) values (new.username, 'profile');
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer;
+
+drop trigger if exists profiles_sync_slug_registry on profiles;
+create trigger profiles_sync_slug_registry after update of username on profiles
+for each row execute function sync_profile_slug_registry();
+
+-- ---------------------------------------------------------------------------
+-- Phase N — publish-triggered rebuild
+--
+-- The static per-book/article/creator pages (scripts/generate-seo-pages.mjs)
+-- only get (re)generated at build time - without this, a newly published
+-- book or article has no working URL until the next code push or the
+-- nightly 06:17 UTC cron in .github/workflows/static.yml. This fires a
+-- GitHub Actions rebuild the moment something is actually published, so the
+-- new URL is live within a couple minutes instead.
+--
+-- The GitHub PAT used to call the Actions API is stored in Supabase Vault
+-- (Project Settings -> Vault in the dashboard), never in a plain table -
+-- this function only ever references it by name. If the secret isn't set
+-- yet, the publish just silently doesn't trigger an extra rebuild (the
+-- nightly cron still covers it) rather than failing the publish itself.
+-- ---------------------------------------------------------------------------
+
+create extension if not exists pg_net;
+
+-- Shared by every trigger below - the actual "call GitHub" step, with no
+-- knowledge of which table/column changed. Each trigger function below
+-- decides FOR ITSELF whether a rebuild is warranted, then calls this.
+create or replace function fire_content_rebuild_dispatch() returns void as $$
+declare
+  v_pat text;
+begin
+  select decrypted_secret into v_pat from vault.decrypted_secrets where name = 'github_pat_content_publish';
+  if v_pat is null then
+    return;
+  end if;
+
+  perform net.http_post(
+    url := 'https://api.github.com/repos/GoddyOra/Orastories/dispatches',
+    headers := jsonb_build_object(
+      'Authorization', 'Bearer ' || v_pat,
+      'Accept', 'application/vnd.github+json',
+      'Content-Type', 'application/json'
+    ),
+    body := jsonb_build_object('event_type', 'content-published')
+  );
+end;
+$$ language plpgsql security definer;
+
+create or replace function trigger_content_rebuild() returns trigger as $$
+begin
+  if tg_op = 'UPDATE' and (old.is_published is not distinct from new.is_published or new.is_published is not true) then
+    return new;
+  end if;
+  if tg_op = 'INSERT' and new.is_published is not true then
+    return new;
+  end if;
+  perform fire_content_rebuild_dispatch();
+  return new;
+end;
+$$ language plpgsql security definer;
+
+drop trigger if exists books_trigger_content_rebuild on books;
+create trigger books_trigger_content_rebuild after insert or update of is_published on books
+for each row execute function trigger_content_rebuild();
+
+drop trigger if exists articles_trigger_content_rebuild on articles;
+create trigger articles_trigger_content_rebuild after insert or update of is_published on articles
+for each row execute function trigger_content_rebuild();
+
+-- A creator's bio/display_name feeds directly into their static profile
+-- page's meta description and JSON-LD (scripts/generate-seo-pages.mjs) - so
+-- filling in a bio should get the same fast auto-rebuild as publishing a
+-- book/article, not wait for the nightly cron. Also fires if role just
+-- became 'creator' (a brand-new profile page needs to exist at all) or if
+-- username changed (their URL itself just moved).
+create or replace function trigger_profile_rebuild() returns trigger as $$
+begin
+  if new.role != 'creator' then
+    return new;
+  end if;
+  if old.role = 'creator'
+     and old.bio is not distinct from new.bio
+     and old.display_name is not distinct from new.display_name
+     and old.username is not distinct from new.username then
+    return new;
+  end if;
+  perform fire_content_rebuild_dispatch();
+  return new;
+end;
+$$ language plpgsql security definer;
+
+drop trigger if exists profiles_trigger_content_rebuild on profiles;
+create trigger profiles_trigger_content_rebuild after update of bio, display_name, username, role on profiles
+for each row execute function trigger_profile_rebuild();
+
+-- ---------------------------------------------------------------------------
+-- Phase O — site-wide search (books, articles, creators)
+--
+-- search_vector is a plain (non-generated) tsvector column, kept in sync by
+-- an ordinary BEFORE INSERT/UPDATE trigger rather than a GENERATED ALWAYS AS
+-- column - Postgres's generated-column immutability check rejects even a
+-- correctly config-qualified to_tsvector() call (and any IMMUTABLE-labeled
+-- wrapper around it), a well-known friction with that specific mechanism.
+-- A trigger has no such restriction: this is the traditional, most
+-- well-established way to maintain a full-text search column, and the same
+-- pattern (trigger computes a derived column on write) already used for
+-- slug_registry in Phase N. Weighted fields so a title match ranks above a
+-- body-text match; the GIN index keeps @@ matches fast as the catalog grows.
+-- ---------------------------------------------------------------------------
+
+alter table books add column if not exists search_vector tsvector;
+
+create or replace function update_book_search_vector() returns trigger as $$
+begin
+  new.search_vector :=
+    setweight(to_tsvector('english', coalesce(new.title, '')), 'A') ||
+    setweight(to_tsvector('english', coalesce(new.genre, '') || ' ' || coalesce(new.author, '')), 'B') ||
+    setweight(to_tsvector('english', coalesce(new.synopsis, '')), 'C');
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists books_search_vector_update on books;
+create trigger books_search_vector_update before insert or update on books
+for each row execute function update_book_search_vector();
+
+update books set search_vector =
+  setweight(to_tsvector('english', coalesce(title, '')), 'A') ||
+  setweight(to_tsvector('english', coalesce(genre, '') || ' ' || coalesce(author, '')), 'B') ||
+  setweight(to_tsvector('english', coalesce(synopsis, '')), 'C');
+
+create index if not exists books_search_idx on books using gin(search_vector);
+
+alter table articles add column if not exists search_vector tsvector;
+
+create or replace function update_article_search_vector() returns trigger as $$
+begin
+  new.search_vector :=
+    setweight(to_tsvector('english', coalesce(new.title, '')), 'A') ||
+    setweight(to_tsvector('english', array_to_string(coalesce(new.keywords, '{}'), ' ')), 'B') ||
+    setweight(to_tsvector('english', coalesce(new.body, '')), 'C');
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists articles_search_vector_update on articles;
+create trigger articles_search_vector_update before insert or update on articles
+for each row execute function update_article_search_vector();
+
+update articles set search_vector =
+  setweight(to_tsvector('english', coalesce(title, '')), 'A') ||
+  setweight(to_tsvector('english', array_to_string(coalesce(keywords, '{}'), ' ')), 'B') ||
+  setweight(to_tsvector('english', coalesce(body, '')), 'C');
+
+create index if not exists articles_search_idx on articles using gin(search_vector);
+
+alter table profiles add column if not exists search_vector tsvector;
+
+create or replace function update_profile_search_vector() returns trigger as $$
+begin
+  new.search_vector :=
+    setweight(to_tsvector('english', coalesce(new.username, '') || ' ' || coalesce(new.display_name, '')), 'A') ||
+    setweight(to_tsvector('english', coalesce(new.bio, '')), 'C');
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists profiles_search_vector_update on profiles;
+create trigger profiles_search_vector_update before insert or update on profiles
+for each row execute function update_profile_search_vector();
+
+update profiles set search_vector =
+  setweight(to_tsvector('english', coalesce(username, '') || ' ' || coalesce(display_name, '')), 'A') ||
+  setweight(to_tsvector('english', coalesce(bio, '')), 'C');
+
+create index if not exists profiles_search_idx on profiles using gin(search_vector);
+
+-- Reserve /search itself, same reasoning as the other reserved words seeded
+-- in Phase N's slug_registry.
+insert into slug_registry (slug, kind) values ('search', 'reserved')
+  on conflict (slug) do nothing;
+
+-- Deliberately NOT security definer: this only ever needs to see what the
+-- calling role (anon or authenticated) could already see directly, and the
+-- existing RLS policies on books/articles/profiles already enforce exactly
+-- the right visibility (is_published, role = 'creator', etc.) - running as
+-- the caller keeps that enforcement intact instead of needing to duplicate
+-- it here by hand. Each branch is independently limited (not one global
+-- limit after the union) so a flood of book matches can't crowd articles or
+-- creators out of the results entirely.
+create or replace function search_site(search_query text, per_category_limit int default 5)
+returns table (kind text, slug text, title text, subtitle text, image text, rank real) as $$
+  (
+    select 'book', b.id, b.title, b.author, b.cover, ts_rank(b.search_vector, websearch_to_tsquery('english', search_query))
+    from books b
+    where b.is_published and b.price_cents is not null
+      and b.search_vector @@ websearch_to_tsquery('english', search_query)
+    order by ts_rank(b.search_vector, websearch_to_tsquery('english', search_query)) desc
+    limit per_category_limit
+  )
+  union all
+  (
+    select 'article', a.slug, a.title, coalesce(p.display_name, p.username), a.cover_image_url,
+      ts_rank(a.search_vector, websearch_to_tsquery('english', search_query))
+    from articles a
+    join profiles p on p.id = a.author_id
+    where a.is_published
+      and a.search_vector @@ websearch_to_tsquery('english', search_query)
+    order by ts_rank(a.search_vector, websearch_to_tsquery('english', search_query)) desc
+    limit per_category_limit
+  )
+  union all
+  (
+    select 'creator', pr.username, coalesce(pr.display_name, pr.username), '@' || pr.username, null,
+      ts_rank(pr.search_vector, websearch_to_tsquery('english', search_query))
+    from profiles pr
+    where pr.role = 'creator' and pr.username is not null
+      and pr.search_vector @@ websearch_to_tsquery('english', search_query)
+    order by ts_rank(pr.search_vector, websearch_to_tsquery('english', search_query)) desc
+    limit per_category_limit
+  );
+$$ language sql stable;
+
+grant execute on function search_site(text, int) to anon, authenticated;

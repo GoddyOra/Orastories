@@ -256,6 +256,237 @@
   );
 })();
 
+// Site-wide search: unlike the auth widget below, this runs on every page
+// including index.html - search has nothing to do with the React app's own
+// state, so there's no reason to special-case it out. Lives in its own IIFE
+// (rather than folded into the nav-restructure one above) so it can be
+// reasoned about, and silently skipped, independently.
+(async () => {
+  const controls = document.getElementById('siteNavControls');
+  if (!controls) return;
+
+  const SUPABASE_URL = 'https://spordcubtugawsyelqxz.supabase.co';
+  const SUPABASE_ANON_KEY =
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNwb3JkY3VidHVnYXdzeWVscXh6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxMTQ0MTMsImV4cCI6MjEwMTY5MDQxM30.jQhzR_pTDIFpaJDfBmxn0-9gFovxNRZEt4nfy20uNbg';
+
+  let supabase;
+  try {
+    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+    supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  } catch (error) {
+    console.error('Orastories nav search: failed to load Supabase client', error);
+    return;
+  }
+
+  const isLight = () => !document.body.classList.contains('dark-mode');
+
+  const wrapper = document.createElement('div');
+  wrapper.id = 'siteNavSearch';
+  wrapper.className = 'relative';
+
+  const toggleBtn = document.createElement('button');
+  toggleBtn.type = 'button';
+  toggleBtn.setAttribute('aria-label', 'Search Orastories');
+  toggleBtn.className = 'p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors';
+  toggleBtn.innerHTML =
+    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
+
+  const panel = document.createElement('div');
+  panel.className = 'hidden absolute right-0 mt-2 w-[19rem] max-w-[90vw] rounded-sm border shadow-lg z-50 overflow-hidden';
+
+  const inputWrap = document.createElement('div');
+  inputWrap.className = 'p-2 border-b';
+  const input = document.createElement('input');
+  input.type = 'search';
+  input.placeholder = 'Search books, articles, creators…';
+  input.autocomplete = 'off';
+  input.className = 'w-full px-3 py-2 text-sm rounded outline-none bg-transparent';
+  inputWrap.appendChild(input);
+
+  const resultsBox = document.createElement('div');
+  resultsBox.className = 'max-h-96 overflow-y-auto';
+
+  panel.appendChild(inputWrap);
+  panel.appendChild(resultsBox);
+  wrapper.appendChild(toggleBtn);
+  wrapper.appendChild(panel);
+  controls.appendChild(wrapper);
+
+  const CATEGORY_LABELS = { book: 'Books', article: 'Articles', creator: 'Creators' };
+  let activeItems = [];
+  let activeIndex = -1;
+
+  const applyTheme = () => {
+    const light = isLight();
+    panel.classList.remove('bg-white', 'border-black/10', 'bg-[#161616]', 'border-white/10');
+    (light ? 'bg-white border-black/10' : 'bg-[#161616] border-white/10').split(' ').forEach((c) => panel.classList.add(c));
+    input.classList.remove('text-gray-900', 'text-white');
+    input.classList.add(light ? 'text-gray-900' : 'text-white');
+  };
+  new MutationObserver(applyTheme).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  applyTheme();
+
+  const setActiveIndex = (index) => {
+    activeIndex = index;
+    activeItems.forEach((el, i) => {
+      el.classList.toggle('bg-black/5', i === activeIndex);
+      el.classList.toggle('dark:bg-white/10', i === activeIndex);
+    });
+    if (activeIndex >= 0) activeItems[activeIndex].scrollIntoView({ block: 'nearest' });
+  };
+
+  const openPanel = () => {
+    panel.classList.remove('hidden');
+  };
+  const closePanel = () => {
+    panel.classList.add('hidden');
+    activeItems = [];
+    activeIndex = -1;
+  };
+
+  const rowClass = () =>
+    `flex items-center gap-3 px-3 py-2 text-sm cursor-pointer transition-colors ${
+      isLight() ? 'text-gray-900 hover:bg-black/5' : 'text-white hover:bg-white/10'
+    }`;
+
+  function renderResults(query, rows) {
+    resultsBox.innerHTML = '';
+    activeItems = [];
+    activeIndex = -1;
+
+    if (!rows.length) {
+      const empty = document.createElement('p');
+      empty.className = `px-3 py-4 text-sm ${isLight() ? 'text-gray-500' : 'text-gray-400'}`;
+      empty.textContent = `No results for "${query}".`;
+      resultsBox.appendChild(empty);
+      return;
+    }
+
+    const byKind = { book: [], article: [], creator: [] };
+    rows.forEach((row) => {
+      if (byKind[row.kind]) byKind[row.kind].push(row);
+    });
+
+    Object.entries(byKind).forEach(([kind, items]) => {
+      if (!items.length) return;
+      const heading = document.createElement('p');
+      heading.className = `px-3 pt-3 pb-1 text-[10px] uppercase tracking-[0.2em] font-semibold ${
+        isLight() ? 'text-gray-400' : 'text-gray-500'
+      }`;
+      heading.textContent = CATEGORY_LABELS[kind];
+      resultsBox.appendChild(heading);
+
+      items.forEach((row) => {
+        const a = document.createElement('a');
+        a.href = `/${row.slug}`;
+        a.className = rowClass();
+
+        if (row.image) {
+          const img = document.createElement('img');
+          img.src = row.image;
+          img.alt = '';
+          img.className = 'w-8 h-11 object-cover rounded-sm flex-shrink-0 bg-black/5';
+          a.appendChild(img);
+        }
+
+        const textWrap = document.createElement('div');
+        textWrap.className = 'min-w-0';
+        const titleEl = document.createElement('p');
+        titleEl.className = 'truncate font-medium';
+        titleEl.textContent = row.title;
+        textWrap.appendChild(titleEl);
+        if (row.subtitle) {
+          const subEl = document.createElement('p');
+          subEl.className = `truncate text-xs ${isLight() ? 'text-gray-500' : 'text-gray-400'}`;
+          subEl.textContent = row.subtitle;
+          textWrap.appendChild(subEl);
+        }
+        a.appendChild(textWrap);
+
+        resultsBox.appendChild(a);
+        activeItems.push(a);
+      });
+    });
+
+    const seeAll = document.createElement('a');
+    seeAll.href = `/search?q=${encodeURIComponent(query)}`;
+    seeAll.className = `block px-3 py-2 text-xs uppercase tracking-[0.15em] font-semibold border-t ${
+      isLight() ? 'text-amber-700 border-black/10 hover:bg-black/5' : 'text-amber-400 border-white/10 hover:bg-white/10'
+    }`;
+    seeAll.textContent = `See all results for "${query}"`;
+    resultsBox.appendChild(seeAll);
+  }
+
+  let debounceTimer;
+  let latestQuery = '';
+  const runSearch = (query) => {
+    latestQuery = query;
+    supabase
+      .rpc('search_site', { search_query: query, per_category_limit: 3 })
+      .then(({ data, error }) => {
+        if (query !== latestQuery) return; // a newer keystroke already superseded this request
+        if (error) {
+          console.error('Orastories search failed:', error);
+          renderResults(query, []);
+          return;
+        }
+        renderResults(query, data || []);
+        openPanel();
+      });
+  };
+
+  toggleBtn.addEventListener('click', () => {
+    const isHidden = panel.classList.contains('hidden');
+    if (isHidden) {
+      openPanel();
+      input.focus();
+    } else {
+      closePanel();
+    }
+  });
+
+  input.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    const value = input.value.trim();
+    if (!value) {
+      closePanel();
+      return;
+    }
+    debounceTimer = setTimeout(() => runSearch(value), 250);
+  });
+
+  input.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      closePanel();
+      input.blur();
+      return;
+    }
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      if (activeItems.length) setActiveIndex(Math.min(activeIndex + 1, activeItems.length - 1));
+      return;
+    }
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      if (activeItems.length) setActiveIndex(Math.max(activeIndex - 1, 0));
+      return;
+    }
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      if (activeIndex >= 0 && activeItems[activeIndex]) {
+        window.location.href = activeItems[activeIndex].getAttribute('href');
+      } else if (input.value.trim()) {
+        window.location.href = `/search?q=${encodeURIComponent(input.value.trim())}`;
+      }
+    }
+  });
+
+  document.addEventListener('click', (event) => {
+    if (wrapper.contains(event.target)) return;
+    closePanel();
+  });
+})();
+
 // Site-wide auth widget: shows the signed-in reader's username in the nav on
 // every static page. index.html runs the full React app, which already owns
 // #siteNavControls via NavAccountControl - this widget skips itself there

@@ -89,7 +89,12 @@ const Library: React.FC<LibraryProps> = ({ onSelectBook, onSelectCreator, theme 
         <p className={`text-[10px] sm:text-xs uppercase tracking-[0.35em] sm:tracking-[0.6em] font-semibold mb-8 sm:mb-10 ${isLight ? 'text-gray-500' : 'text-gray-500'}`}>
           A Community of Storytellers
         </p>
-        <div className={`w-16 h-px mx-auto opacity-40 ${isLight ? 'bg-gray-400' : 'bg-[#d4af37]'}`}></div>
+        <div className={`w-16 h-px mx-auto opacity-40 mb-8 sm:mb-10 ${isLight ? 'bg-gray-400' : 'bg-[#d4af37]'}`}></div>
+        <p className={`max-w-xl mx-auto text-sm leading-relaxed ${isLight ? 'text-gray-600' : 'text-gray-400'}`}>
+          Free romance, thriller, and nonfiction novels from independent authors — read online, no downloads or apps
+          required. Preview any book's first 3 chapters instantly, then claim it free to keep reading on any phone,
+          tablet, or computer.
+        </p>
       </header>
 
       {loadError && (

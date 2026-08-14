@@ -3,12 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Orastories | Books</title>
-  <meta name="description" content="Browse the full Orastories catalog: novels and nonfiction from a growing community of independent authors, with synopses, genres, and free online reading.">
-  <meta property="og:title" content="Orastories | Books">
-  <meta property="og:description" content="Browse the full Orastories catalog: novels and nonfiction from a growing community of independent authors, with synopses, genres, and free online reading.">
+  <title>Orastories | Free Romance, Thriller &amp; Nonfiction Novels — Read Online</title>
+  <meta name="description" content="Browse free romance, thriller, and nonfiction novels from independent authors. Read online free — no downloads or apps, no cost, on any phone, tablet, or computer.">
+  <meta property="og:title" content="Orastories | Free Romance, Thriller &amp; Nonfiction Novels — Read Online">
+  <meta property="og:description" content="Browse free romance, thriller, and nonfiction novels from independent authors. Read online free — no downloads or apps, no cost, on any phone, tablet, or computer.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://orastories.com/books">
+  <meta property="og:image" content="https://orastories.com/images/social/og-banner.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Orastories | Free Romance, Thriller &amp; Nonfiction Novels — Read Online">
+  <meta name="twitter:description" content="Browse free romance, thriller, and nonfiction novels from independent authors. Read online free — no downloads or apps, no cost, on any phone, tablet, or computer.">
+  <meta name="twitter:image" content="https://orastories.com/images/social/og-banner.png">
+  <link rel="canonical" href="https://orastories.com/books">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"CollectionPage","name":"Orastories Books","url":"https://orastories.com/books"}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Do I need to download an app to read on Orastories?","acceptedAnswer":{"@type":"Answer","text":"No. Every book and article is read directly in your browser - on any phone, tablet, or computer. There's nothing to install."}},{"@type":"Question","name":"Are the books on Orastories really free?","acceptedAnswer":{"@type":"Answer","text":"Yes. Every book currently on Orastories is free to read - preview the first 3 chapters instantly, then claim the full book at no cost."}},{"@type":"Question","name":"Can I read Orastories books on my phone or tablet?","acceptedAnswer":{"@type":"Answer","text":"Yes. Orastories works in any modern mobile or desktop browser, so you can start on your phone and pick up right where you left off on another device."}},{"@type":"Question","name":"Can I download books as a PDF or EPUB?","acceptedAnswer":{"@type":"Answer","text":"Not currently - books are read online through the Orastories reader rather than downloaded as a file. A dedicated reading app is planned for the future."}}]}</script>
   <link rel="icon" type="image/svg+xml" href="images/logos/orastories-logo-option-2.svg">
   <link rel="stylesheet" href="styles/tailwind.generated.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,6 +37,14 @@
       -moz-osx-font-smoothing: grayscale;
     }
     .dark-mode ::-webkit-scrollbar-track { background: #0f0f0f; }
+    @keyframes slugHighlightPulse {
+      0%, 100% { transform: scale(1); }
+      20%, 60% { transform: scale(1.02); }
+    }
+    .slug-highlight {
+      box-shadow: 0 0 0 3px rgba(180, 130, 30, 0.55);
+      animation: slugHighlightPulse 1.8s ease-in-out 2;
+    }
   </style>
 </head>
 <body id="booksBody" class="bg-[#fcfaf7] text-[#1a1a1a] font-['Montserrat'] transition-colors duration-500">
@@ -53,9 +71,31 @@
 
   <main class="pt-24 max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-12 md:py-16">
     <div class="text-center mb-12 md:mb-14">
-      <p class="text-sm md:text-base text-gray-700 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed">Explore all Orastories titles below, including yet-to-be-published new releases. You can preview <span class="font-semibold">the first 3 chapters</span> free, then either claim a free copy or purchase the book to unlock full access and keep reading right here on the site.</p>
+      <p class="text-sm md:text-base text-gray-700 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed">Explore all Orastories titles below, including yet-to-be-published new releases. Every book is free to read online — no downloads or apps required. You can preview <span class="font-semibold">the first 3 chapters</span> instantly, then claim a free copy or purchase the book to unlock full access and keep reading right here on the site, on any phone, tablet, or computer.</p>
     </div>
     <div id="booksGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 items-stretch"></div>
+
+    <section class="max-w-3xl mx-auto mt-20 md:mt-28">
+      <h2 class="text-2xl md:text-3xl font-['Playfair_Display'] font-bold text-center mb-10 dark:text-white">Frequently Asked Questions</h2>
+      <div class="space-y-6">
+        <div>
+          <h3 class="font-semibold mb-1 dark:text-white">Do I need to download an app to read on Orastories?</h3>
+          <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">No. Every book and article is read directly in your browser — on any phone, tablet, or computer. There's nothing to install.</p>
+        </div>
+        <div>
+          <h3 class="font-semibold mb-1 dark:text-white">Are the books on Orastories really free?</h3>
+          <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">Yes. Every book currently on Orastories is free to read — preview the first 3 chapters instantly, then claim the full book at no cost.</p>
+        </div>
+        <div>
+          <h3 class="font-semibold mb-1 dark:text-white">Can I read Orastories books on my phone or tablet?</h3>
+          <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">Yes. Orastories works in any modern mobile or desktop browser, so you can start on your phone and pick up right where you left off on another device.</p>
+        </div>
+        <div>
+          <h3 class="font-semibold mb-1 dark:text-white">Can I download books as a PDF or EPUB?</h3>
+          <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">Not currently — books are read online through the Orastories reader rather than downloaded as a file. A dedicated reading app is planned for the future.</p>
+        </div>
+      </div>
+    </section>
   </main>
 
   <div id="previewModal" class="hidden fixed inset-0 z-[60] bg-black/70 p-3 sm:p-5 md:p-8" aria-hidden="true">
@@ -325,6 +365,7 @@ function showToast(message, isError) {
 
     books.forEach((book) => {
       const card = document.createElement('article');
+      card.id = book.id;
       card.className =
         'h-full flex flex-col border border-gray-200 dark:border-white/10 rounded-lg p-6 hover:shadow-lg dark:hover:shadow-amber-400/20 transition-all duration-300 bg-white dark:bg-gray-900';
 
@@ -404,6 +445,18 @@ function showToast(message, isError) {
   }
 
   renderBooks();
+
+  // /books/{slug} redirects here with the book's id as the hash (see
+  // scripts/generate-seo-pages.mjs's per-book dist/books/{slug}.html shim) -
+  // jump straight to that book's card and its buy/claim button.
+  if (window.location.hash) {
+    const target = document.getElementById(window.location.hash.slice(1));
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      target.classList.add('slug-highlight');
+      setTimeout(() => target.classList.remove('slug-highlight'), 3600);
+    }
+  }
 })();
   </script>
   <script type="module" src="scripts/navigation.js"></script>

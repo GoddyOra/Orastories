@@ -34,15 +34,17 @@ const ArticleCard: React.FC<ArticleCardProps> = ({ article, theme, onSelect, onS
         <p className={`text-xs ${textMuted}`}>
           By{' '}
           {article.author.isCreator ? (
-            <button
+            <a
+              href={`/${article.author.username}`}
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 onSelectCreator(article.author.username);
               }}
               className={isLight ? 'hover:text-amber-700' : 'hover:text-amber-400'}
             >
               {article.author.displayName || article.author.username}
-            </button>
+            </a>
           ) : (
             article.author.displayName || article.author.username
           )}

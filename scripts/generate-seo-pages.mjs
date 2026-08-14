@@ -17,7 +17,7 @@
 
 import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
-import { readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -78,6 +78,73 @@ function truncate(text, max) {
   const clean = String(text ?? '').replace(/\s+/g, ' ').trim();
   if (clean.length <= max) return clean;
   return clean.slice(0, max - 1).trimEnd() + '…';
+}
+
+function capitalize(text) {
+  return text.length ? text[0].toUpperCase() + text.slice(1) : text;
+}
+
+// ---------------------------------------------------------------------------
+// Genre -> natural search-phrase matching for book descriptions ("free
+// [phrase], read online"). Two tiers so this stays useful for genres that
+// don't exist yet:
+//   1. GENRE_PHRASE_EXACT - hand-tuned phrasing for exact genre strings
+//      already seen in the catalog (best quality).
+//   2. GENRE_TOKEN_PHRASES - per-word fallback used when a new book's genre
+//      string doesn't match anything above: split on "/" and ",", map what's
+//      recognized, keep the rest as-is. Never produces empty output.
+// ---------------------------------------------------------------------------
+
+const GENRE_PHRASE_EXACT = {
+  'contemporary romance': 'contemporary romance novel',
+  'self-help / psychology': 'self-help and psychology book',
+  'contemporary romance / legal thriller': 'romantic legal thriller',
+  'christian romance / new adult': 'christian romance novel',
+  'legal thriller, mystery, crime thriller': 'legal thriller and crime mystery',
+  'contemporary romance / workplace romance': 'workplace romance novel',
+  'legal thriller': 'legal thriller',
+  'true crime': 'true crime story',
+  'nonfiction / reference': 'nonfiction reference book',
+  'nonfiction / sports trivia': 'sports trivia book',
+  "children's nonfiction": "kids' nonfiction book"
+};
+
+const GENRE_TOKEN_PHRASES = {
+  'contemporary romance': 'contemporary romance',
+  'legal thriller': 'legal thriller',
+  'crime thriller': 'crime thriller',
+  mystery: 'mystery',
+  'true crime': 'true crime',
+  'self-help': 'self-help',
+  psychology: 'psychology',
+  'christian romance': 'christian romance',
+  'new adult': 'new adult',
+  'workplace romance': 'workplace romance',
+  nonfiction: 'nonfiction',
+  reference: 'reference',
+  'sports trivia': 'sports trivia',
+  "children's nonfiction": "kids' nonfiction",
+  fantasy: 'fantasy',
+  'science fiction': 'science fiction',
+  horror: 'horror',
+  'historical romance': 'historical romance',
+  'young adult': 'young adult',
+  poetry: 'poetry',
+  memoir: 'memoir',
+  biography: 'biography'
+};
+
+function genreSearchPhrase(genre) {
+  if (!genre) return 'book';
+  const key = genre.trim().toLowerCase();
+  if (GENRE_PHRASE_EXACT[key]) return GENRE_PHRASE_EXACT[key];
+
+  const tokens = genre
+    .split(/[/,]/)
+    .map((t) => t.trim().toLowerCase())
+    .filter(Boolean);
+  const phrases = [...new Set(tokens.slice(0, 2).map((t) => GENRE_TOKEN_PHRASES[t] || t))];
+  return phrases.length ? `${phrases.join(' and ')} book` : 'book';
 }
 
 // ---------------------------------------------------------------------------
@@ -173,7 +240,7 @@ function bodyToPlainText(body) {
 const FONT_HREF =
   "https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Montserrat:wght@300;400;600&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap";
 
-function pageShell({ title, description, canonicalPath, ogType, ogImage, jsonLd, bodyHtml }) {
+function pageShell({ title, description, canonicalPath, ogType, ogImage, keywords, jsonLd, bodyHtml }) {
   const canonicalUrl = `${SITE_ORIGIN}${canonicalPath}`;
   const escTitle = escapeHtml(title);
   const escDescription = escapeHtml(description);
@@ -185,6 +252,7 @@ function pageShell({ title, description, canonicalPath, ogType, ogImage, jsonLd,
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escTitle}</title>
   <meta name="description" content="${escDescription}">
+  ${keywords ? `<meta name="keywords" content="${escapeHtml(keywords)}">` : ''}
   <link rel="canonical" href="${canonicalUrl}">
   <meta property="og:type" content="${ogType}">
   <meta property="og:title" content="${escTitle}">
@@ -282,10 +350,55 @@ ${bodyHtml}
 }
 
 // ---------------------------------------------------------------------------
+// Legacy URL redirect shim - book/article detail pages used to live at
+// /book-{id} and /article-{slug}. Phase N moved them to bare root-level
+// slugs (/{id}, /{slug}) so they share one flat, indexable namespace with
+// creator profiles (/{username}). Anything already indexed or shared under
+// the old prefixed path still needs to resolve, so that path keeps getting
+// written - just as a redirect to the new canonical one instead of 404ing.
+// ---------------------------------------------------------------------------
+
+// canonicalPath defaults to the redirect target itself (the legacy /book-*
+// and /article-* shims - the redirect destination IS the real canonical
+// page). The /books/{slug} purchase-shortcut shim is the one case where
+// these differ: it redirects to a URL fragment on the books listing page,
+// but its canonical still needs to point at the book's own real detail
+// page, not at that fragment, so it isn't treated as separate content.
+function redirectShellHtml(toPath, canonicalPath = toPath) {
+  const canonicalUrl = `${SITE_ORIGIN}${canonicalPath}`;
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="robots" content="noindex">
+  <link rel="canonical" href="${canonicalUrl}">
+  <meta http-equiv="refresh" content="0;url=${toPath}">
+  <title>Redirecting…</title>
+</head>
+<body>
+  <p>This page has moved. <a href="${toPath}">Continue to ${SITE_ORIGIN}${toPath}</a>.</p>
+</body>
+</html>
+`;
+}
+
+// ---------------------------------------------------------------------------
 // Book detail pages
 // ---------------------------------------------------------------------------
 
+// Every book on Orastories is currently free (price_cents: 0) - when that's
+// true, lead the search snippet with it explicitly rather than relying on
+// searchers to infer it, since "free [genre] books/novels" is real, matched
+// search intent this site can honestly claim.
+function bookMetaDescription(book) {
+  const phrase = genreSearchPhrase(book.genre);
+  const prefix =
+    book.price_cents === 0 ? `Free ${phrase}, read online — ` : `${capitalize(phrase)} — `;
+  return prefix + truncate(book.synopsis, 155 - prefix.length);
+}
+
 function buildBookJsonLd(book, canonicalUrl) {
+  const isFree = book.price_cents === 0;
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Book',
@@ -294,7 +407,11 @@ function buildBookJsonLd(book, canonicalUrl) {
     description: book.synopsis || undefined,
     genre: book.genre || undefined,
     image: book.cover || undefined,
-    url: canonicalUrl
+    url: canonicalUrl,
+    // Real schema.org property Google's structured-data pipeline recognizes
+    // for surfacing "free to access" content - only ever true when the book
+    // actually is (price_cents === 0), never asserted for paid titles.
+    isAccessibleForFree: isFree || undefined
   };
   if (book.price_cents != null) {
     jsonLd.offers = {
@@ -328,6 +445,7 @@ function buildBookBodyHtml(book, chapters) {
         <h1 class="text-4xl font-['Playfair_Display'] font-bold mb-2 dark:text-white">${escapeHtml(book.title)}</h1>
         <p class="text-gray-600 dark:text-gray-400 mb-2">${escapeHtml(book.author)}${book.published_date ? ' • ' + escapeHtml(book.published_date) : ''}</p>
         ${book.genre ? `<p class="text-[11px] uppercase tracking-[0.2em] text-amber-700 dark:text-amber-400 mb-4">${escapeHtml(book.genre)}</p>` : ''}
+        ${book.price_cents === 0 ? `<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Free ${genreSearchPhrase(book.genre)}, read online — no download, no app, no cost. Works on any phone, tablet, or computer right in your browser.</p>` : ''}
         <p class="text-gray-700 dark:text-gray-300 leading-relaxed mb-6">${escapeHtml(book.synopsis)}</p>
         <a href="/?book=${encodeURIComponent(book.id)}" class="inline-block px-6 py-3 border border-amber-700 dark:border-amber-400 text-amber-700 dark:text-amber-400 rounded hover:bg-amber-700 hover:text-white dark:hover:bg-amber-400 dark:hover:text-black transition-all text-xs uppercase tracking-[0.2em] font-semibold">Continue Reading &mdash; Free Sign Up</a>
       </div>
@@ -349,7 +467,7 @@ function buildHomeBodyHtml(books) {
     <header class="max-w-5xl mx-auto mb-14 sm:mb-16 md:mb-24 text-center">
       <h1 class="text-5xl sm:text-6xl md:text-8xl font-['Playfair_Display'] mb-4 sm:mb-6 tracking-tight min-h-[48px] sm:min-h-[60px] md:min-h-[96px] text-gray-900 dark:text-[#d4af37]">Orastories</h1>
       <p class="text-[10px] sm:text-xs uppercase tracking-[0.35em] sm:tracking-[0.6em] font-semibold mb-8 sm:mb-10 text-gray-500">A Community of Storytellers</p>
-      <p class="max-w-xl mx-auto text-sm text-gray-600 dark:text-gray-400 leading-relaxed">Novels and nonfiction from a growing community of independent authors. Read the first 3 chapters of any book free, then claim or purchase to keep reading.</p>
+      <p class="max-w-xl mx-auto text-sm text-gray-600 dark:text-gray-400 leading-relaxed">Free romance, thriller, and nonfiction novels from independent authors — read online, no downloads or apps required. Preview any book's first 3 chapters instantly, then claim it free to keep reading on any phone, tablet, or computer.</p>
     </header>
     <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 items-stretch">
 ${cardsHtml}
@@ -360,7 +478,7 @@ ${cardsHtml}
 function buildBookCardHtml(book) {
   const priceLabel = book.price_cents === 0 ? 'Read Free' : book.price_cents != null ? `View Book — $${(book.price_cents / 100).toFixed(2)}` : 'View Book';
   return `  <article class="h-full flex flex-col border border-gray-200 dark:border-white/10 rounded-lg p-6 bg-white dark:bg-gray-900">
-    <a href="/book-${encodeURIComponent(book.id)}" class="flex flex-col h-full">
+    <a href="/${encodeURIComponent(book.id)}" class="flex flex-col h-full">
       <div class="aspect-[2/3] overflow-hidden rounded mb-4 bg-gray-100 dark:bg-gray-800">
         <img src="${escapeHtml(book.cover)}" alt="${escapeHtml(book.title)} cover" class="w-full h-full object-cover" loading="lazy" width="400" height="600">
       </div>
@@ -382,6 +500,21 @@ function authorNameFor(article) {
   return (profile && (profile.display_name || profile.username)) || 'A Reader';
 }
 
+// The creator's first keyword is their own best signal of what the piece is
+// "about" for search - if the article's opening text doesn't already
+// naturally contain it (most well-written openings do, but not guaranteed),
+// lead the snippet with it explicitly rather than relying on truncation
+// alone to convey relevance.
+function articleMetaDescription(article, maxLen) {
+  const plainBody = bodyToPlainText(article.body);
+  const primaryKeyword = article.keywords && article.keywords[0];
+  if (!primaryKeyword || plainBody.toLowerCase().includes(primaryKeyword.toLowerCase())) {
+    return truncate(plainBody, maxLen);
+  }
+  const prefix = `${capitalize(primaryKeyword)}: `;
+  return prefix + truncate(plainBody, maxLen - prefix.length);
+}
+
 function buildArticleJsonLd(article, canonicalUrl) {
   return {
     '@context': 'https://schema.org',
@@ -390,7 +523,12 @@ function buildArticleJsonLd(article, canonicalUrl) {
     author: { '@type': 'Person', name: authorNameFor(article) },
     datePublished: article.created_at || undefined,
     image: article.cover_image_url || undefined,
-    description: truncate(bodyToPlainText(article.body), 200),
+    description: articleMetaDescription(article, 200),
+    // The creator's own keywords (set at publish time, see lib/articles.ts) -
+    // a real signal for Google's topical understanding of the piece, unlike
+    // the old <meta name="keywords"> tag which search engines mostly ignore
+    // now (that tag is still emitted below for the engines that still read it).
+    keywords: article.keywords && article.keywords.length ? article.keywords.join(', ') : undefined,
     url: canonicalUrl
   };
 }
@@ -412,7 +550,7 @@ ${renderArticleBodyHtml(article.body)}
 
 function buildArticleCardHtml(article) {
   return `  <article class="rounded-sm border overflow-hidden bg-white dark:bg-[#161616] border-black/10 dark:border-white/10">
-    <a href="/article-${encodeURIComponent(article.slug)}" class="block">
+    <a href="/${encodeURIComponent(article.slug)}" class="block">
       ${
         article.cover_image_url
           ? `<div class="aspect-[16/9] overflow-hidden"><img src="${escapeHtml(article.cover_image_url)}" alt="${escapeHtml(article.cover_image_alt || article.title)}" loading="lazy" class="w-full h-full object-cover"></div>`
@@ -424,6 +562,41 @@ function buildArticleCardHtml(article) {
     </a>
     <p class="px-5 pb-5 text-xs text-gray-500 dark:text-gray-400">By ${escapeHtml(authorNameFor(article))}</p>
   </article>`;
+}
+
+// ---------------------------------------------------------------------------
+// Creator profile pages - mirrors components/CreatorProfile.tsx (same
+// role='creator' gating as lib/creatorProfile.ts's getCreatorProfile(), same
+// published-books listing as listPublishedBooksByCreator()).
+// ---------------------------------------------------------------------------
+
+function buildCreatorJsonLd(creator, canonicalUrl) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    name: creator.display_name || creator.username,
+    alternateName: creator.username,
+    description: creator.bio || undefined,
+    url: canonicalUrl
+  };
+}
+
+function buildCreatorBodyHtml(creator, books) {
+  const memberSinceYear = creator.created_at ? new Date(creator.created_at).getFullYear() : null;
+  const booksHtml = books.length
+    ? `  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 items-stretch">
+${books.map(buildBookCardHtml).join('\n')}
+  </div>`
+    : '  <p class="text-center text-sm text-gray-500 dark:text-gray-400">Hasn\'t published any books yet.</p>';
+
+  return `  <div class="text-center mb-14">
+    <h1 class="text-4xl sm:text-5xl font-['Playfair_Display'] mb-3 tracking-tight dark:text-white">${escapeHtml(creator.display_name || creator.username)}</h1>
+    <p class="text-[10px] sm:text-xs uppercase tracking-[0.35em] font-semibold text-gray-500">
+      @${escapeHtml(creator.username)}${memberSinceYear ? ` &mdash; Member since ${memberSinceYear}` : ''}
+    </p>
+    ${creator.bio ? `<p class="max-w-2xl mx-auto mt-6 text-sm sm:text-base leading-relaxed text-gray-700 dark:text-gray-300">${escapeHtml(creator.bio)}</p>` : ''}
+  </div>
+${booksHtml}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -477,11 +650,23 @@ async function fetchArticles() {
   return withRetry(async () => {
     const { data, error } = await supabase
       .from('articles')
-      .select('id,slug,title,body,cover_image_url,cover_image_alt,created_at,profiles(username,display_name,role)')
+      .select('id,slug,title,body,cover_image_url,cover_image_alt,keywords,created_at,profiles(username,display_name,role)')
       .eq('is_published', true);
     if (error) throw error;
     return data || [];
   }, 'fetch articles');
+}
+
+async function fetchCreators() {
+  return withRetry(async () => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('username,display_name,bio,created_at')
+      .eq('role', 'creator')
+      .not('username', 'is', null);
+    if (error) throw error;
+    return data || [];
+  }, 'fetch creators');
 }
 
 async function injectGrid(fileName, placeholder, cardsHtml) {
@@ -496,43 +681,85 @@ async function injectGrid(fileName, placeholder, cardsHtml) {
 
 async function main() {
   console.log('generate-seo-pages: fetching published catalog...');
-  const [books, articles] = await Promise.all([fetchBooks(), fetchArticles()]);
-  console.log(`  ${books.length} published book(s), ${articles.length} published article(s)`);
+  const [books, articles, creators] = await Promise.all([fetchBooks(), fetchArticles(), fetchCreators()]);
+  console.log(`  ${books.length} published book(s), ${articles.length} published article(s), ${creators.length} creator profile(s)`);
+
+  await mkdir(path.join(distDir, 'books'), { recursive: true });
 
   await Promise.all(
     books.map(async (book) => {
       const chapters = await fetchPreviewChapters(book.id);
-      const canonicalPath = `/book-${book.id}`;
+      const canonicalPath = `/${book.id}`;
       const html = pageShell({
         title: `${book.title} | Orastories`,
-        description: truncate(book.synopsis, 155),
+        description: bookMetaDescription(book),
         canonicalPath,
         ogType: 'book',
         ogImage: book.cover || null,
         jsonLd: buildBookJsonLd(book, `${SITE_ORIGIN}${canonicalPath}`),
         bodyHtml: buildBookBodyHtml(book, chapters)
       });
-      await writeFile(path.join(distDir, `book-${book.id}.html`), html, 'utf8');
+      await writeFile(path.join(distDir, `${book.id}.html`), html, 'utf8');
+      // Legacy path from before Phase N's bare-slug URLs - redirects rather
+      // than 404s so anything already indexed/shared under it keeps working.
+      await writeFile(path.join(distDir, `book-${book.id}.html`), redirectShellHtml(canonicalPath), 'utf8');
+      // /books/{slug} - a UX shortcut straight to the buy/claim button on the
+      // books listing page, not new content, so it redirects rather than
+      // being its own indexed page (see the books.html hash-scroll handler).
+      await writeFile(
+        path.join(distDir, 'books', `${book.id}.html`),
+        redirectShellHtml(`/books#${book.id}`, canonicalPath),
+        'utf8'
+      );
     })
   );
   console.log(`  wrote ${books.length} book detail page(s)`);
 
   await Promise.all(
     articles.map(async (article) => {
-      const canonicalPath = `/article-${article.slug}`;
+      const canonicalPath = `/${article.slug}`;
       const html = pageShell({
         title: `${article.title} | Orastories`,
-        description: truncate(bodyToPlainText(article.body), 155),
+        description: articleMetaDescription(article, 155),
         canonicalPath,
         ogType: 'article',
         ogImage: article.cover_image_url || null,
+        keywords: article.keywords && article.keywords.length ? article.keywords.join(', ') : null,
         jsonLd: buildArticleJsonLd(article, `${SITE_ORIGIN}${canonicalPath}`),
         bodyHtml: buildArticleBodyHtml(article)
       });
-      await writeFile(path.join(distDir, `article-${article.slug}.html`), html, 'utf8');
+      await writeFile(path.join(distDir, `${article.slug}.html`), html, 'utf8');
+      // Legacy path - see the matching comment in the book loop above.
+      await writeFile(path.join(distDir, `article-${article.slug}.html`), redirectShellHtml(canonicalPath), 'utf8');
     })
   );
   console.log(`  wrote ${articles.length} article detail page(s)`);
+
+  const booksByCreator = new Map();
+  for (const book of books) {
+    const profile = Array.isArray(book.profiles) ? book.profiles[0] : book.profiles;
+    if (!profile?.username) continue;
+    if (!booksByCreator.has(profile.username)) booksByCreator.set(profile.username, []);
+    booksByCreator.get(profile.username).push(book);
+  }
+
+  await Promise.all(
+    creators.map(async (creator) => {
+      const canonicalPath = `/${creator.username}`;
+      const creatorBooks = booksByCreator.get(creator.username) || [];
+      const html = pageShell({
+        title: `${creator.display_name || creator.username} | Orastories`,
+        description: truncate(creator.bio || `${creator.display_name || creator.username}'s author profile on Orastories.`, 155),
+        canonicalPath,
+        ogType: 'profile',
+        ogImage: null,
+        jsonLd: buildCreatorJsonLd(creator, `${SITE_ORIGIN}${canonicalPath}`),
+        bodyHtml: buildCreatorBodyHtml(creator, creatorBooks)
+      });
+      await writeFile(path.join(distDir, `${creator.username}.html`), html, 'utf8');
+    })
+  );
+  console.log(`  wrote ${creators.length} creator profile page(s)`);
 
   await injectGrid(
     'books.html',
@@ -570,8 +797,9 @@ async function main() {
     { loc: '/blog', lastmod: BUILD_DATE },
     { loc: '/reviews', lastmod: BUILD_DATE },
     { loc: '/contact', lastmod: BUILD_DATE },
-    ...books.map((b) => ({ loc: `/book-${b.id}`, lastmod: (b.created_at || BUILD_DATE).slice(0, 10) })),
-    ...articles.map((a) => ({ loc: `/article-${a.slug}`, lastmod: (a.created_at || BUILD_DATE).slice(0, 10) }))
+    ...books.map((b) => ({ loc: `/${b.id}`, lastmod: (b.created_at || BUILD_DATE).slice(0, 10) })),
+    ...articles.map((a) => ({ loc: `/${a.slug}`, lastmod: (a.created_at || BUILD_DATE).slice(0, 10) })),
+    ...creators.map((c) => ({ loc: `/${c.username}`, lastmod: (c.created_at || BUILD_DATE).slice(0, 10) }))
   ];
   const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Search | Orastories</title>
+  <meta name="description" content="Search Orastories for books, articles, and creators.">
+  <meta name="robots" content="noindex">
+  <link rel="canonical" href="https://orastories.com/search">
+  <link rel="icon" type="image/svg+xml" href="images/logos/orastories-logo-option-2.svg">
+  <link rel="stylesheet" href="styles/tailwind.generated.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Montserrat:wght@300;400;600&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap">
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Montserrat:wght@300;400;600&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Montserrat:wght@300;400;600&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet"></noscript>
+  <style>
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #fcfaf7; }
+    ::-webkit-scrollbar-thumb { background: #d1d1d1; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #b1b1b1; }
+    body { overflow-x: hidden; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+    .dark-mode ::-webkit-scrollbar-track { background: #0f0f0f; }
+  </style>
+</head>
+<body id="searchBody" class="bg-[#fcfaf7] text-[#1a1a1a] font-['Montserrat'] transition-colors duration-500">
+  <nav class="fixed top-0 left-0 right-0 bg-white/95 dark:bg-black/95 backdrop-blur z-50 border-b border-gray-200 dark:border-white/10 transition-colors duration-500">
+    <div class="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-3 md:py-4 flex flex-wrap justify-between items-center gap-3">
+      <a href="/" class="inline-flex items-center transition-opacity hover:opacity-90" aria-label="Orastories Home">
+        <img id="siteLogo" src="images/logos/orastories-logo-option-2.svg" alt="Orastories" class="h-10 w-auto" width="138" height="40" />
+      </a>
+      <div class="flex flex-wrap justify-end gap-3 sm:gap-5 md:gap-8 items-center text-sm sm:text-base">
+        <a href="/" class="hover:text-amber-700 dark:hover:text-amber-400 transition-colors">Home</a>
+        <a href="/books" class="hover:text-amber-700 dark:hover:text-amber-400 transition-colors">Books</a>
+        <a href="/reviews" class="hover:text-amber-700 dark:hover:text-amber-400 transition-colors">Reviews</a>
+        <a href="/blog" class="hover:text-amber-700 dark:hover:text-amber-400 transition-colors">Blog</a>
+        <a href="/contact" class="hover:text-amber-700 dark:hover:text-amber-400 transition-colors">Contact</a>
+        <button id="themeToggle" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors" aria-label="Toggle Theme">
+          <svg id="sunIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+            <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+          </svg>
+          <svg id="moonIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="pt-24 max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-12 md:py-16">
+    <div class="max-w-2xl mx-auto mb-10">
+      <form id="searchForm" class="flex gap-2">
+        <input
+          id="searchInput"
+          type="search"
+          autocomplete="off"
+          placeholder="Search books, articles, creators…"
+          class="flex-1 px-4 py-3 text-sm rounded border border-gray-300 dark:border-white/15 bg-white dark:bg-[#161616] dark:text-white outline-none focus:border-amber-700 dark:focus:border-amber-400 transition-colors"
+        />
+        <button type="submit" class="px-5 py-3 border border-amber-700 dark:border-amber-400 text-amber-700 dark:text-amber-400 rounded hover:bg-amber-700 hover:text-white dark:hover:bg-amber-400 dark:hover:text-black transition-all text-xs uppercase tracking-[0.2em] font-semibold">Search</button>
+      </form>
+      <p id="searchSummary" class="mt-4 text-sm text-gray-500 dark:text-gray-400"></p>
+    </div>
+
+    <div id="searchResults"></div>
+  </main>
+
+  <footer class="border-t border-gray-200 dark:border-white/10 mt-16 py-8 text-center text-gray-600 dark:text-gray-400 transition-colors duration-500">
+    <p>&copy; 2026 Orastories. All rights reserved.</p>
+    <p class="mt-2 text-sm"><a href="/privacy" class="hover:text-amber-700 dark:hover:text-amber-400 transition-colors">Privacy Policy</a> &middot; <a href="/terms" class="hover:text-amber-700 dark:hover:text-amber-400 transition-colors">Terms of Service</a></p>
+  </footer>
+
+  <script>
+    const SUPABASE_URL = 'https://spordcubtugawsyelqxz.supabase.co';
+    const SUPABASE_ANON_KEY =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNwb3JkY3VidHVnYXdzeWVscXh6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxMTQ0MTMsImV4cCI6MjEwMTY5MDQxM30.jQhzR_pTDIFpaJDfBmxn0-9gFovxNRZEt4nfy20uNbg';
+
+    const searchBody = document.getElementById('searchBody');
+    const themeToggle = document.getElementById('themeToggle');
+    const sunIcon = document.getElementById('sunIcon');
+    const moonIcon = document.getElementById('moonIcon');
+    const siteLogo = document.getElementById('siteLogo');
+    const searchForm = document.getElementById('searchForm');
+    const searchInput = document.getElementById('searchInput');
+    const searchSummary = document.getElementById('searchSummary');
+    const searchResults = document.getElementById('searchResults');
+
+    const applyTheme = (isDark) => {
+      siteLogo.src = isDark ? 'images/logos/orastories-logo-option-2-dark.svg' : 'images/logos/orastories-logo-option-2.svg';
+      if (isDark) {
+        searchBody.classList.add('dark-mode');
+        searchBody.style.backgroundColor = '#0f0f0f';
+        searchBody.style.color = '#e0e0e0';
+        sunIcon.style.display = 'block';
+        moonIcon.style.display = 'none';
+      } else {
+        searchBody.classList.remove('dark-mode');
+        searchBody.style.backgroundColor = '#fcfaf7';
+        searchBody.style.color = '#1a1a1a';
+        sunIcon.style.display = 'none';
+        moonIcon.style.display = 'block';
+      }
+    };
+    applyTheme(localStorage.getItem('darkMode') === 'true');
+    themeToggle.addEventListener('click', () => {
+      const isDark = !searchBody.classList.contains('dark-mode');
+      localStorage.setItem('darkMode', String(isDark));
+      applyTheme(isDark);
+    });
+
+    const CATEGORY_LABELS = { book: 'Books', article: 'Articles', creator: 'Creators' };
+
+    function cardFor(row) {
+      const a = document.createElement('a');
+      a.href = `/${row.slug}`;
+      a.className =
+        'flex items-center gap-4 p-4 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 hover:shadow-lg transition-all';
+
+      if (row.image) {
+        const img = document.createElement('img');
+        img.src = row.image;
+        img.alt = '';
+        img.loading = 'lazy';
+        img.className =
+          row.kind === 'article'
+            ? 'w-24 h-16 object-cover rounded-sm flex-shrink-0 bg-black/5'
+            : 'w-14 h-20 object-cover rounded-sm flex-shrink-0 bg-black/5';
+        a.appendChild(img);
+      }
+
+      const textWrap = document.createElement('div');
+      textWrap.className = 'min-w-0';
+      const titleEl = document.createElement('p');
+      titleEl.className = "font-['Playfair_Display'] font-bold truncate dark:text-white";
+      titleEl.textContent = row.title;
+      textWrap.appendChild(titleEl);
+      if (row.subtitle) {
+        const subEl = document.createElement('p');
+        subEl.className = 'truncate text-sm text-gray-500 dark:text-gray-400 mt-1';
+        subEl.textContent = row.subtitle;
+        textWrap.appendChild(subEl);
+      }
+      a.appendChild(textWrap);
+      return a;
+    }
+
+    function renderResults(query, rows) {
+      searchResults.innerHTML = '';
+
+      if (!query) {
+        searchSummary.textContent = '';
+        return;
+      }
+
+      searchSummary.textContent = rows.length
+        ? `${rows.length} result${rows.length === 1 ? '' : 's'} for "${query}"`
+        : `No results for "${query}".`;
+
+      const byKind = { book: [], article: [], creator: [] };
+      rows.forEach((row) => {
+        if (byKind[row.kind]) byKind[row.kind].push(row);
+      });
+
+      Object.entries(byKind).forEach(([kind, items]) => {
+        if (!items.length) return;
+        const section = document.createElement('section');
+        section.className = 'mb-12';
+
+        const heading = document.createElement('h2');
+        heading.className = "text-xl font-['Playfair_Display'] font-bold mb-4 dark:text-white";
+        heading.textContent = CATEGORY_LABELS[kind];
+        section.appendChild(heading);
+
+        const grid = document.createElement('div');
+        grid.className = kind === 'creator' ? 'grid grid-cols-1 sm:grid-cols-2 gap-4' : 'grid grid-cols-1 sm:grid-cols-2 gap-4';
+        items.forEach((row) => grid.appendChild(cardFor(row)));
+        section.appendChild(grid);
+
+        searchResults.appendChild(section);
+      });
+    }
+
+    (async () => {
+      let supabase;
+      try {
+        const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+        supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      } catch (error) {
+        console.error('Orastories search: failed to load Supabase client', error);
+        searchSummary.textContent = 'Search is unavailable right now. Please try again.';
+        return;
+      }
+
+      const runSearch = async (query) => {
+        const trimmed = query.trim();
+        const url = new URL(window.location.href);
+        if (trimmed) {
+          url.searchParams.set('q', trimmed);
+        } else {
+          url.searchParams.delete('q');
+        }
+        window.history.replaceState({}, '', url.toString());
+
+        if (!trimmed) {
+          renderResults('', []);
+          return;
+        }
+
+        searchSummary.textContent = `Searching for "${trimmed}"…`;
+        const { data, error } = await supabase.rpc('search_site', { search_query: trimmed, per_category_limit: 20 });
+        if (error) {
+          console.error('Orastories search failed:', error);
+          searchSummary.textContent = 'Something went wrong running that search. Please try again.';
+          return;
+        }
+        renderResults(trimmed, data || []);
+      };
+
+      searchForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        runSearch(searchInput.value);
+      });
+
+      const initialQuery = new URLSearchParams(window.location.search).get('q') || '';
+      searchInput.value = initialQuery;
+      if (initialQuery) runSearch(initialQuery);
+    })();
+  </script>
+  <script type="module" src="scripts/navigation.js"></script>
+</body>
+</html>

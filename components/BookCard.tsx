@@ -85,16 +85,17 @@ const BookCard: React.FC<BookCardProps> = ({
         </h2>
         <p className="text-gray-500 text-[10px] mt-3 uppercase tracking-[0.3em] font-medium">
           {book.creatorUsername && !disableCreatorLink ? (
-            <button
-              type="button"
+            <a
+              href={`/${book.creatorUsername}`}
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 onSelectCreator(book.creatorUsername!);
               }}
               className={`transition-colors ${isLight ? 'hover:text-amber-700' : 'hover:text-amber-400'}`}
             >
               {book.author} — {book.publishedDate}
-            </button>
+            </a>
           ) : (
             <>
               {book.author} — {book.publishedDate}

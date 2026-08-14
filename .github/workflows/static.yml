@@ -12,9 +12,17 @@ on:
   # Content (books/articles) is published straight to Supabase, not via a
   # git push - this nightly rebuild picks up newly published content into
   # the static SEO pages (see scripts/generate-seo-pages.mjs) without
-  # waiting on the next code change.
+  # waiting on the next code change. Kept as a fallback safety net now that
+  # repository_dispatch below covers the common case within a minute or two.
   schedule:
     - cron: "17 6 * * *"
+
+  # A Postgres trigger (db/schema.sql's trigger_content_rebuild()) fires this
+  # the moment a book or article is actually published, via GitHub's REST
+  # API - so a new URL goes live in a couple minutes instead of waiting for
+  # the nightly cron above.
+  repository_dispatch:
+    types: [content-published]
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:

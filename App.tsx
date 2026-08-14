@@ -70,14 +70,14 @@ const App: React.FC = () => {
 
   // Static pages (reviews.html) can only link into the React app via a full
   // URL, same reasoning as openPortal above - a creator's username in the
-  // query string opens their public profile directly.
+  // query string opens their public profile directly. Once opened, the URL
+  // is replaced with the clean /{username} path (rather than stripped back
+  // to bare "/") so it stays meaningful and shareable from here on.
   useEffect(() => {
     const username = new URLSearchParams(window.location.search).get('creator');
     if (!username) return;
     setSelectedCreatorUsername(username);
-    const url = new URL(window.location.href);
-    url.searchParams.delete('creator');
-    window.history.replaceState({}, '', url.toString());
+    window.history.replaceState({ view: 'creator', username }, '', `/${username}`);
   }, []);
 
   // blog.html can only link into the React app via a full URL, same
@@ -86,9 +86,7 @@ const App: React.FC = () => {
     const slug = new URLSearchParams(window.location.search).get('article');
     if (!slug) return;
     setSelectedArticleSlug(slug);
-    const url = new URL(window.location.href);
-    url.searchParams.delete('article');
-    window.history.replaceState({}, '', url.toString());
+    window.history.replaceState({ view: 'article', slug }, '', `/${slug}`);
   }, []);
 
   // The static per-book SEO pages (book-<id>.html) link back here with the
@@ -97,20 +95,60 @@ const App: React.FC = () => {
   useEffect(() => {
     const bookId = new URLSearchParams(window.location.search).get('book');
     if (!bookId) return;
-    handleSelectBook({
-      id: bookId,
-      title: '',
-      author: '',
-      cover: '',
-      genre: '',
-      synopsis: '',
-      publishedDate: '',
-      creatorUsername: null,
-      loadBook: () => loadBookById(bookId)
-    });
-    const url = new URL(window.location.href);
-    url.searchParams.delete('book');
-    window.history.replaceState({}, '', url.toString());
+    handleSelectBook(
+      {
+        id: bookId,
+        title: '',
+        author: '',
+        cover: '',
+        genre: '',
+        synopsis: '',
+        publishedDate: '',
+        creatorUsername: null,
+        loadBook: () => loadBookById(bookId)
+      },
+      false
+    );
+    window.history.replaceState({ view: 'book', bookId }, '', `/${bookId}`);
+  }, []);
+
+  // Browser Back/Forward after in-app navigation (see handleSelectBook/
+  // handleSelectCreator/handleSelectArticle below, which each push a state
+  // object tagging the view alongside the URL change) - restores the right
+  // view without re-pushing a new history entry.
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      const state = event.state as { view?: string; bookId?: string; username?: string; slug?: string } | null;
+      if (!state || state.view === 'library') {
+        setSelectedBook(null);
+        setSelectedCreatorUsername(null);
+        setSelectedArticleSlug(null);
+        return;
+      }
+      if (state.view === 'book' && state.bookId) {
+        const bookId = state.bookId;
+        handleSelectBook(
+          {
+            id: bookId,
+            title: '',
+            author: '',
+            cover: '',
+            genre: '',
+            synopsis: '',
+            publishedDate: '',
+            creatorUsername: null,
+            loadBook: () => loadBookById(bookId)
+          },
+          false
+        );
+      } else if (state.view === 'creator' && state.username) {
+        handleSelectCreator(state.username, false);
+      } else if (state.view === 'article' && state.slug) {
+        handleSelectArticle(state.slug, false);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   // Stripe Checkout redirects back here as a full page navigation (React
@@ -192,11 +230,12 @@ const App: React.FC = () => {
     window.dispatchEvent(new Event('resize'));
   }, [selectedBook, showPortal]);
 
-  const handleSelectBook = async (book: BookCatalogItem) => {
+  const handleSelectBook = async (book: BookCatalogItem, pushUrl: boolean = true) => {
     const requestId = ++loadRequestId.current;
     setLoadError(null);
     setIsLoadingBook(true);
     setShowPortal(false);
+    if (pushUrl) window.history.pushState({ view: 'book', bookId: book.id }, '', `/${book.id}`);
 
     try {
       const loadedBook = await book.loadBook();
@@ -219,18 +258,20 @@ const App: React.FC = () => {
     setSignInReason(reason ?? null);
   };
 
-  const handleSelectCreator = (username: string) => {
+  const handleSelectCreator = (username: string, pushUrl: boolean = true) => {
     setSelectedBook(null);
     setShowPortal(false);
     setSelectedArticleSlug(null);
     setSelectedCreatorUsername(username);
+    if (pushUrl) window.history.pushState({ view: 'creator', username }, '', `/${username}`);
   };
 
-  const handleSelectArticle = (slug: string) => {
+  const handleSelectArticle = (slug: string, pushUrl: boolean = true) => {
     setSelectedBook(null);
     setShowPortal(false);
     setSelectedCreatorUsername(null);
     setSelectedArticleSlug(slug);
+    if (pushUrl) window.history.pushState({ view: 'article', slug }, '', `/${slug}`);
   };
 
   return (
@@ -249,7 +290,10 @@ const App: React.FC = () => {
             <Suspense fallback={<RouteLoadingFallback theme={theme} />}>
               <Reader
                 book={selectedBook}
-                onClose={() => setSelectedBook(null)}
+                onClose={() => {
+                  setSelectedBook(null);
+                  window.history.pushState({ view: 'library' }, '', '/');
+                }}
                 externalTheme={theme}
                 onThemeChange={setTheme}
                 onRequireSignIn={handleOpenPortal}
@@ -275,7 +319,10 @@ const App: React.FC = () => {
               username={selectedCreatorUsername}
               theme={theme}
               onSelectBook={handleSelectBook}
-              onBack={() => setSelectedCreatorUsername(null)}
+              onBack={() => {
+                setSelectedCreatorUsername(null);
+                window.history.pushState({ view: 'library' }, '', '/');
+              }}
             />
           </Suspense>
         ) : selectedArticleSlug ? (
@@ -283,7 +330,10 @@ const App: React.FC = () => {
             <ArticleReader
               slug={selectedArticleSlug}
               theme={theme}
-              onBack={() => setSelectedArticleSlug(null)}
+              onBack={() => {
+                setSelectedArticleSlug(null);
+                window.history.pushState({ view: 'library' }, '', '/');
+              }}
               onRequireSignIn={handleOpenPortal}
               onSelectCreator={handleSelectCreator}
             />
