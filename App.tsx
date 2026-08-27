@@ -209,6 +209,20 @@ const App: React.FC = () => {
     return () => window.removeEventListener('orastories-theme-change', handleExternalThemeChange as EventListener);
   }, []);
 
+  // index.html disables gtag's automatic pageview (send_page_view: false)
+  // specifically because this app never does a full reload between views -
+  // this effect fires the real pageview instead, every time, from whatever
+  // path is actually settled after the various pushState/replaceState calls
+  // above have already run.
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof (window as any).gtag !== 'function') return;
+    (window as any).gtag('event', 'page_view', {
+      page_path: window.location.pathname,
+      page_title: document.title,
+      page_location: window.location.href
+    });
+  }, [selectedBook, showPortal, selectedCreatorUsername, selectedArticleSlug]);
+
   useEffect(() => {
     const siteNav = document.getElementById('siteNavBar') || document.querySelector('body > nav');
     const contentWrapper = document.getElementById('contentWrapper');

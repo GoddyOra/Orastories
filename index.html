@@ -1,6 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-76ZXK09PF3"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    // This is the React app's shell - it never does a full page reload
+    // between views (Reader/Portal/CreatorProfile/ArticleReader/Library all
+    // swap client-side), and the URL is often mid-cleanup (a ?book=/
+    // ?creator=/?article= param being replaced with the clean path) at the
+    // moment this script tag runs. The automatic pageview is disabled here;
+    // App.tsx fires every pageview itself once the real path is settled.
+    gtag('config', 'G-76ZXK09PF3', { send_page_view: false });
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Orastories | Home</title>
