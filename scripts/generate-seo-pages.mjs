@@ -134,6 +134,39 @@ const GENRE_TOKEN_PHRASES = {
   biography: 'biography'
 };
 
+function buildBreadcrumbJsonLd(items) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((item, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: item.name,
+      item: item.url
+    }))
+  };
+}
+
+function buildBreadcrumbHtml(items) {
+  return `  <nav aria-label="Breadcrumb" class="mb-6 text-xs text-gray-500 dark:text-gray-400">
+    ${items
+      .map((item, i) =>
+        i === items.length - 1
+          ? `<span aria-current="page">${escapeHtml(item.name)}</span>`
+          : `<a href="${escapeHtml(item.url.replace(SITE_ORIGIN, ''))}" class="hover:text-amber-700 dark:hover:text-amber-400 hover:underline">${escapeHtml(item.name)}</a> <span class="mx-1">/</span> `
+      )
+      .join('')}
+  </nav>`;
+}
+
+function genreTokens(genre) {
+  if (!genre) return [];
+  return genre
+    .split(/[/,]/)
+    .map((t) => t.trim().toLowerCase())
+    .filter(Boolean);
+}
+
 function genreSearchPhrase(genre) {
   if (!genre) return 'book';
   const key = genre.trim().toLowerCase();
@@ -271,7 +304,10 @@ function pageShell({ title, description, canonicalPath, ogType, ogImage, keyword
   <meta name="twitter:title" content="${escTitle}">
   <meta name="twitter:description" content="${escDescription}">
   ${ogImage ? `<meta name="twitter:image" content="${escapeHtml(ogImage)}">` : ''}
-  <script type="application/ld+json">${safeJsonLd(jsonLd)}</script>
+  ${(Array.isArray(jsonLd) ? jsonLd : [jsonLd])
+    .filter(Boolean)
+    .map((block) => `<script type="application/ld+json">${safeJsonLd(block)}</script>`)
+    .join('\n  ')}
   <link rel="icon" type="image/svg+xml" href="images/logos/orastories-logo-option-2.svg">
   <link rel="stylesheet" href="styles/tailwind.generated.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -405,7 +441,12 @@ function bookMetaDescription(book) {
   return prefix + truncate(book.synopsis, 155 - prefix.length);
 }
 
-function buildBookJsonLd(book, canonicalUrl) {
+function reviewerNameFor(review) {
+  const profile = Array.isArray(review.profiles) ? review.profiles[0] : review.profiles;
+  return (profile && (profile.display_name || profile.username)) || 'A Reader';
+}
+
+function buildBookJsonLd(book, canonicalUrl, reviews = []) {
   const isFree = book.price_cents === 0;
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -429,10 +470,87 @@ function buildBookJsonLd(book, canonicalUrl) {
       availability: 'https://schema.org/InStock'
     };
   }
+  // Google's own guidelines require review/rating markup to reflect reviews
+  // that are genuinely visible on the page (see the ratings block in
+  // buildBookBodyHtml below) - so this only ever appears for books that
+  // actually have at least one real reader review, never a fabricated or
+  // placeholder rating, and grows automatically as real reviews come in.
+  if (reviews.length) {
+    const avg = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+    jsonLd.aggregateRating = {
+      '@type': 'AggregateRating',
+      ratingValue: avg.toFixed(1),
+      reviewCount: reviews.length,
+      bestRating: 5,
+      worstRating: 1
+    };
+    jsonLd.review = reviews.slice(0, 10).map((r) => ({
+      '@type': 'Review',
+      author: { '@type': 'Person', name: reviewerNameFor(r) },
+      datePublished: r.created_at ? r.created_at.slice(0, 10) : undefined,
+      reviewBody: r.body || undefined,
+      reviewRating: { '@type': 'Rating', ratingValue: r.rating, bestRating: 5, worstRating: 1 }
+    }));
+  }
   return jsonLd;
 }
 
-function buildBookBodyHtml(book, chapters) {
+function buildReviewsHtml(reviews) {
+  if (!reviews.length) return '';
+  const avg = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+  const stars = (n) => '★'.repeat(n) + '☆'.repeat(5 - n);
+  return `
+    <div class="border-t border-gray-200 dark:border-white/10 mt-12 pt-10">
+      <h2 class="text-xl font-['Playfair_Display'] font-bold mb-1 dark:text-white">Reader Reviews</h2>
+      <p class="text-amber-700 dark:text-amber-400 mb-6" aria-label="${avg.toFixed(1)} out of 5 stars, ${reviews.length} review${reviews.length === 1 ? '' : 's'}">
+        <span aria-hidden="true">${stars(Math.round(avg))}</span>
+        <span class="text-sm text-gray-600 dark:text-gray-400">${avg.toFixed(1)} out of 5 &middot; ${reviews.length} review${reviews.length === 1 ? '' : 's'}</span>
+      </p>
+      <div class="space-y-6">
+        ${reviews
+          .slice(0, 10)
+          .map(
+            (r) => `<div>
+          <p class="text-amber-700 dark:text-amber-400 text-sm" aria-hidden="true">${stars(r.rating)}</p>
+          ${r.body ? `<p class="text-gray-700 dark:text-gray-300 text-sm mt-1">${escapeHtml(r.body)}</p>` : ''}
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">${escapeHtml(reviewerNameFor(r))}</p>
+        </div>`
+          )
+          .join('\n        ')}
+      </div>
+    </div>`;
+}
+
+function pickRelated(items, current, { sameField, tokenField, limit = 3 } = {}) {
+  const rest = items.filter((i) => i !== current);
+  const bySame = sameField ? rest.filter((i) => sameField(i) === sameField(current)) : [];
+  const currentTokens = tokenField ? new Set(tokenField(current)) : new Set();
+  const byToken = tokenField
+    ? rest.filter((i) => !bySame.includes(i) && tokenField(i).some((t) => currentTokens.has(t)))
+    : [];
+  const remainder = rest.filter((i) => !bySame.includes(i) && !byToken.includes(i));
+  return [...bySame, ...byToken, ...remainder].slice(0, limit);
+}
+
+function buildRelatedBooksHtml(book, allBooks) {
+  const related = pickRelated(allBooks, book, {
+    sameField: (b) => {
+      const p = Array.isArray(b.profiles) ? b.profiles[0] : b.profiles;
+      return p?.username;
+    },
+    tokenField: (b) => genreTokens(b.genre)
+  });
+  if (!related.length) return '';
+  return `
+    <div class="border-t border-gray-200 dark:border-white/10 mt-12 pt-10">
+      <h2 class="text-xl font-['Playfair_Display'] font-bold mb-6 dark:text-white">More Free Books to Read</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+${related.map(buildBookCardHtml).join('\n')}
+      </div>
+    </div>`;
+}
+
+function buildBookBodyHtml(book, chapters, allBooks = [], reviews = []) {
   const chaptersHtml = chapters.length
     ? chapters
         .map(
@@ -445,6 +563,11 @@ function buildBookBodyHtml(book, chapters) {
     : '    <p class="text-sm text-gray-500 dark:text-gray-400">No preview available for this book yet.</p>';
 
   return `  <article>
+    ${buildBreadcrumbHtml([
+      { name: 'Home', url: `${SITE_ORIGIN}/` },
+      { name: 'Books', url: `${SITE_ORIGIN}/books` },
+      { name: book.title, url: `${SITE_ORIGIN}/${book.id}` }
+    ])}
     <div class="flex flex-col sm:flex-row gap-8 mb-12">
       <div class="w-full sm:w-64 shrink-0">
         <img src="${escapeHtml(book.cover)}" alt="${escapeHtml(book.title)} cover" class="w-full aspect-[2/3] object-cover rounded-lg shadow-md" width="400" height="600">
@@ -463,6 +586,8 @@ function buildBookBodyHtml(book, chapters) {
       <p class="text-[10px] uppercase tracking-[0.3em] text-amber-700 dark:text-amber-400 mb-6">Free Preview &mdash; First 3 Chapters</p>
 ${chaptersHtml}
     </div>
+    ${buildReviewsHtml(reviews)}
+    ${buildRelatedBooksHtml(book, allBooks)}
   </article>`;
 }
 
@@ -523,6 +648,85 @@ function articleMetaDescription(article, maxLen) {
   return prefix + truncate(plainBody, maxLen - prefix.length);
 }
 
+// Splits an article body into {header, contentBlocks} sections using the
+// same "## " header + blank-line-separated block rules renderArticleBodyHtml
+// already renders with, so what gets extracted here matches what a reader
+// actually sees on the page - never fabricated Q&A content.
+function extractArticleSections(body) {
+  const blocks = splitBlocks(body);
+  const sections = [];
+  let current = null;
+  for (const block of blocks) {
+    if (block.startsWith('## ')) {
+      if (current) sections.push(current);
+      current = { header: block.slice(3).trim(), contentBlocks: [] };
+    } else if (current) {
+      current.contentBlocks.push(block);
+    }
+  }
+  if (current) sections.push(current);
+  return sections;
+}
+
+const QUESTION_HEADER_RE = /\?$|^(how to|how do|how does|how can|what is|what are|what's|why|when|where|which|can i|should i|do i)\b/i;
+const NUMBERED_HEADER_RE = /^\d+[).]\s*/;
+
+// Only ever produces a schema block when the creator's own section headers
+// already read as questions or as ordered steps - never invents a Q&A pair
+// or a step that isn't a real section of the article, so this stays honest
+// and applies automatically to any future article with the same structure.
+function buildArticleFaqOrHowToJsonLd(article) {
+  const sections = extractArticleSections(article.body).filter((s) => s.contentBlocks.length);
+  if (!sections.length) return null;
+
+  const numbered = sections.filter((s) => NUMBERED_HEADER_RE.test(s.header));
+  if (numbered.length >= 2 && numbered.length / sections.length >= 0.5) {
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'HowTo',
+      name: article.title,
+      step: numbered.map((s) => ({
+        '@type': 'HowToStep',
+        name: s.header.replace(NUMBERED_HEADER_RE, '').trim(),
+        text: truncate(bodyToPlainText(s.contentBlocks.join('\n\n')), 500)
+      }))
+    };
+  }
+
+  const faq = sections.filter((s) => QUESTION_HEADER_RE.test(s.header));
+  if (!faq.length) return null;
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faq.map((s) => ({
+      '@type': 'Question',
+      name: s.header,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: truncate(bodyToPlainText(s.contentBlocks.join('\n\n')), 500)
+      }
+    }))
+  };
+}
+
+function buildRelatedArticlesHtml(article, allArticles) {
+  const related = pickRelated(allArticles, article, {
+    sameField: (a) => {
+      const p = Array.isArray(a.profiles) ? a.profiles[0] : a.profiles;
+      return p?.username;
+    },
+    tokenField: (a) => (a.keywords || []).map((k) => k.toLowerCase())
+  });
+  if (!related.length) return '';
+  return `
+    <div class="border-t border-gray-200 dark:border-white/10 mt-12 pt-10">
+      <h2 class="text-xl font-['Playfair_Display'] font-bold mb-6 dark:text-white">More From Orastories</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+${related.map(buildArticleCardHtml).join('\n')}
+      </div>
+    </div>`;
+}
+
 function buildArticleJsonLd(article, canonicalUrl) {
   return {
     '@context': 'https://schema.org',
@@ -541,8 +745,13 @@ function buildArticleJsonLd(article, canonicalUrl) {
   };
 }
 
-function buildArticleBodyHtml(article) {
+function buildArticleBodyHtml(article, allArticles = []) {
   return `  <article>
+    ${buildBreadcrumbHtml([
+      { name: 'Home', url: `${SITE_ORIGIN}/` },
+      { name: 'Blog', url: `${SITE_ORIGIN}/blog` },
+      { name: article.title, url: `${SITE_ORIGIN}/${article.slug}` }
+    ])}
     ${
       article.cover_image_url
         ? `<div class="aspect-[16/9] overflow-hidden rounded-sm mb-8"><img src="${escapeHtml(article.cover_image_url)}" alt="${escapeHtml(article.cover_image_alt || article.title)}" class="w-full h-full object-cover"></div>`
@@ -553,6 +762,7 @@ function buildArticleBodyHtml(article) {
     <div class="font-['EB_Garamond'] text-lg leading-8 text-gray-800 dark:text-gray-200">
 ${renderArticleBodyHtml(article.body)}
     </div>
+    ${buildRelatedArticlesHtml(article, allArticles)}
   </article>`;
 }
 
@@ -597,7 +807,11 @@ ${books.map(buildBookCardHtml).join('\n')}
   </div>`
     : '  <p class="text-center text-sm text-gray-500 dark:text-gray-400">Hasn\'t published any books yet.</p>';
 
-  return `  <div class="text-center mb-14">
+  return `  ${buildBreadcrumbHtml([
+    { name: 'Home', url: `${SITE_ORIGIN}/` },
+    { name: `@${creator.username}`, url: `${SITE_ORIGIN}/${creator.username}` }
+  ])}
+  <div class="text-center mb-14">
     <h1 class="text-4xl sm:text-5xl font-['Playfair_Display'] mb-3 tracking-tight dark:text-white">${escapeHtml(creator.display_name || creator.username)}</h1>
     <p class="text-[10px] sm:text-xs uppercase tracking-[0.35em] font-semibold text-gray-500">
       @${escapeHtml(creator.username)}${memberSinceYear ? ` &mdash; Member since ${memberSinceYear}` : ''}
@@ -665,6 +879,22 @@ async function fetchArticles() {
   }, 'fetch articles');
 }
 
+async function fetchReviewsByBook() {
+  return withRetry(async () => {
+    const { data, error } = await supabase
+      .from('reviews')
+      .select('book_id, rating, body, created_at, profiles(username, display_name)')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    const byBook = new Map();
+    for (const review of data || []) {
+      if (!byBook.has(review.book_id)) byBook.set(review.book_id, []);
+      byBook.get(review.book_id).push(review);
+    }
+    return byBook;
+  }, 'fetch reviews');
+}
+
 async function fetchCreators() {
   return withRetry(async () => {
     const { data, error } = await supabase
@@ -689,7 +919,12 @@ async function injectGrid(fileName, placeholder, cardsHtml) {
 
 async function main() {
   console.log('generate-seo-pages: fetching published catalog...');
-  const [books, articles, creators] = await Promise.all([fetchBooks(), fetchArticles(), fetchCreators()]);
+  const [books, articles, creators, reviewsByBook] = await Promise.all([
+    fetchBooks(),
+    fetchArticles(),
+    fetchCreators(),
+    fetchReviewsByBook()
+  ]);
   console.log(`  ${books.length} published book(s), ${articles.length} published article(s), ${creators.length} creator profile(s)`);
 
   await mkdir(path.join(distDir, 'books'), { recursive: true });
@@ -698,14 +933,22 @@ async function main() {
     books.map(async (book) => {
       const chapters = await fetchPreviewChapters(book.id);
       const canonicalPath = `/${book.id}`;
+      const bookReviews = reviewsByBook.get(book.id) || [];
       const html = pageShell({
         title: `${book.title} | Orastories`,
         description: bookMetaDescription(book),
         canonicalPath,
         ogType: 'book',
         ogImage: book.cover || null,
-        jsonLd: buildBookJsonLd(book, `${SITE_ORIGIN}${canonicalPath}`),
-        bodyHtml: buildBookBodyHtml(book, chapters)
+        jsonLd: [
+          buildBookJsonLd(book, `${SITE_ORIGIN}${canonicalPath}`, bookReviews),
+          buildBreadcrumbJsonLd([
+            { name: 'Home', url: `${SITE_ORIGIN}/` },
+            { name: 'Books', url: `${SITE_ORIGIN}/books` },
+            { name: book.title, url: `${SITE_ORIGIN}${canonicalPath}` }
+          ])
+        ],
+        bodyHtml: buildBookBodyHtml(book, chapters, books, bookReviews)
       });
       await writeFile(path.join(distDir, `${book.id}.html`), html, 'utf8');
       // Legacy path from before Phase N's bare-slug URLs - redirects rather
@@ -733,8 +976,16 @@ async function main() {
         ogType: 'article',
         ogImage: article.cover_image_url || null,
         keywords: article.keywords && article.keywords.length ? article.keywords.join(', ') : null,
-        jsonLd: buildArticleJsonLd(article, `${SITE_ORIGIN}${canonicalPath}`),
-        bodyHtml: buildArticleBodyHtml(article)
+        jsonLd: [
+          buildArticleJsonLd(article, `${SITE_ORIGIN}${canonicalPath}`),
+          buildBreadcrumbJsonLd([
+            { name: 'Home', url: `${SITE_ORIGIN}/` },
+            { name: 'Blog', url: `${SITE_ORIGIN}/blog` },
+            { name: article.title, url: `${SITE_ORIGIN}${canonicalPath}` }
+          ]),
+          buildArticleFaqOrHowToJsonLd(article)
+        ],
+        bodyHtml: buildArticleBodyHtml(article, articles)
       });
       await writeFile(path.join(distDir, `${article.slug}.html`), html, 'utf8');
       // Legacy path - see the matching comment in the book loop above.
@@ -761,7 +1012,13 @@ async function main() {
         canonicalPath,
         ogType: 'profile',
         ogImage: null,
-        jsonLd: buildCreatorJsonLd(creator, `${SITE_ORIGIN}${canonicalPath}`),
+        jsonLd: [
+          buildCreatorJsonLd(creator, `${SITE_ORIGIN}${canonicalPath}`),
+          buildBreadcrumbJsonLd([
+            { name: 'Home', url: `${SITE_ORIGIN}/` },
+            { name: `@${creator.username}`, url: `${SITE_ORIGIN}${canonicalPath}` }
+          ])
+        ],
         bodyHtml: buildCreatorBodyHtml(creator, creatorBooks)
       });
       await writeFile(path.join(distDir, `${creator.username}.html`), html, 'utf8');
@@ -823,6 +1080,34 @@ Sitemap: ${SITE_ORIGIN}/sitemap.xml
 `;
   await writeFile(path.join(distDir, 'robots.txt'), robotsTxt, 'utf8');
   console.log('  wrote sitemap.xml and robots.txt');
+
+  const rssItems = [...articles]
+    .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
+    .map((article) => {
+      const url = `${SITE_ORIGIN}/${article.slug}`;
+      const pubDate = article.created_at ? new Date(article.created_at).toUTCString() : new Date().toUTCString();
+      return `    <item>
+      <title>${escapeHtml(article.title)}</title>
+      <link>${url}</link>
+      <guid>${url}</guid>
+      <pubDate>${pubDate}</pubDate>
+      <description>${escapeHtml(articleMetaDescription(article, 300))}</description>
+    </item>`;
+    })
+    .join('\n');
+  const rssXml = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>The Orastories Blog</title>
+    <link>${SITE_ORIGIN}/blog</link>
+    <description>Writing craft, publishing advice, and articles from an open community of authors and readers.</description>
+    <language>en</language>
+${rssItems}
+  </channel>
+</rss>
+`;
+  await writeFile(path.join(distDir, 'rss.xml'), rssXml, 'utf8');
+  console.log('  wrote rss.xml');
 }
 
 main().catch((error) => {
