@@ -272,13 +272,13 @@
           const title = document.createElement('h2');
           title.className = "text-xl font-['Playfair_Display'] font-bold mb-2 dark:text-white";
           title.textContent = article.title;
-          const meta = document.createElement('p');
-          meta.className = 'text-xs uppercase tracking-[0.15em] text-gray-500 dark:text-gray-400';
-          meta.textContent =
-            article.viewCount + ' view' + (article.viewCount === 1 ? '' : 's') +
-            (article.averageRating ? ' — ' + article.averageRating.toFixed(1) + ' ★ (' + article.ratingCount + ')' : '');
           body.appendChild(title);
-          body.appendChild(meta);
+          if (article.averageRating) {
+            const meta = document.createElement('p');
+            meta.className = 'text-xs uppercase tracking-[0.15em] text-gray-500 dark:text-gray-400';
+            meta.textContent = article.averageRating.toFixed(1) + ' ★ (' + article.ratingCount + ')';
+            body.appendChild(meta);
+          }
           link.appendChild(body);
           card.appendChild(link);
 

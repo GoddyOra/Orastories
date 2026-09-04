@@ -149,8 +149,6 @@ const ArticleReader: React.FC<ArticleReaderProps> = ({ slug, theme, onBack, onRe
               )}
               {' — '}
               {new Date(article.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
-              {' — '}
-              {article.viewCount} view{article.viewCount === 1 ? '' : 's'}
             </p>
             {article.keywords.length > 0 && (
               <div className="flex flex-wrap justify-center gap-2 mt-4">

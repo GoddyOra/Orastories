@@ -24,10 +24,11 @@ const ArticleCard: React.FC<ArticleCardProps> = ({ article, theme, onSelect, onS
         )}
         <div className="p-5">
           <h3 className={`text-xl font-['Playfair_Display'] font-bold mb-2 ${isLight ? 'text-gray-900' : 'text-white'}`}>{article.title}</h3>
-          <p className={`text-xs uppercase tracking-[0.15em] ${textMuted}`}>
-            {article.viewCount} view{article.viewCount === 1 ? '' : 's'}
-            {article.averageRating ? ` — ${article.averageRating.toFixed(1)} ★ (${article.ratingCount})` : ''}
-          </p>
+          {article.averageRating ? (
+            <p className={`text-xs uppercase tracking-[0.15em] ${textMuted}`}>
+              {article.averageRating.toFixed(1)} ★ ({article.ratingCount})
+            </p>
+          ) : null}
         </div>
       </button>
       <div className="px-5 pb-5">
