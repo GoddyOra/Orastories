@@ -152,8 +152,7 @@
     const SORTS = [
       { key: 'relevance', label: 'Relevance' },
       { key: 'popular', label: 'Popular' },
-      { key: 'newest', label: 'Newest' },
-      { key: 'goddyora', label: 'By Goddy Ora' }
+      { key: 'newest', label: 'Newest' }
     ];
 
     (async () => {
@@ -225,12 +224,7 @@
 
       function renderArticles() {
         let list = articles;
-        let sortKey = currentSort;
-
-        if (currentSort === 'goddyora') {
-          list = list.filter((a) => a.authorUsername === 'goddyora');
-          sortKey = 'newest';
-        }
+        const sortKey = currentSort;
 
         list = list.slice().sort((a, b) => {
           if (sortKey === 'newest') return new Date(b.createdAt) - new Date(a.createdAt);
