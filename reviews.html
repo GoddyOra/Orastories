@@ -157,9 +157,16 @@
         return;
       }
 
+      // Star-only ratings (no written comment) still count toward each
+      // book's average rating elsewhere on the site (BookCard, JSON-LD
+      // AggregateRating) - they just don't get their own card here, since a
+      // page of bare star rows with no comment reads as thin content. Star-
+      // only reviews store body as '' rather than null, so both are excluded.
       const { data, error } = await supabase
         .from('reviews')
         .select('id,rating,body,books(title),profiles(username,display_name,role)')
+        .not('body', 'is', null)
+        .neq('body', '')
         .order('created_at', { ascending: false })
         .limit(20);
 
