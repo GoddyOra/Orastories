@@ -545,7 +545,7 @@ function buildRelatedBooksHtml(book, allBooks) {
     <div class="border-t border-gray-200 dark:border-white/10 mt-12 pt-10">
       <h2 class="text-xl font-['Playfair_Display'] font-bold mb-6 dark:text-white">More Free Books to Read</h2>
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-${related.map(buildBookCardHtml).join('\n')}
+${related.map((b) => buildBookCardHtml(b, 'h3')).join('\n')}
       </div>
     </div>`;
 }
@@ -593,13 +593,15 @@ ${chaptersHtml}
 
 function buildHomeBodyHtml(books) {
   const cardsHtml = books.length
-    ? books.map(buildBookCardHtml).join('\n')
+    ? books.map((b) => buildBookCardHtml(b)).join('\n')
     : '  <p class="col-span-full text-center text-sm text-gray-500">No books available yet.</p>';
 
   return `<div id="ssgHomeContent" class="min-h-screen py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-12">
     <header class="max-w-5xl mx-auto mb-14 sm:mb-16 md:mb-24 text-center">
-      <h1 class="text-5xl sm:text-6xl md:text-8xl font-['Playfair_Display'] mb-4 sm:mb-6 tracking-tight min-h-[48px] sm:min-h-[60px] md:min-h-[96px] text-gray-900 dark:text-[#d4af37]">Orastories</h1>
-      <p class="text-[10px] sm:text-xs uppercase tracking-[0.35em] sm:tracking-[0.6em] font-semibold mb-8 sm:mb-10 text-gray-500">A Community of Storytellers</p>
+      <h1 class="text-5xl sm:text-6xl md:text-8xl font-['Playfair_Display'] mb-4 sm:mb-6 tracking-tight min-h-[80px] sm:min-h-[104px] md:min-h-[150px] text-gray-900 dark:text-[#d4af37]">
+        Orastories
+        <span class="block text-[10px] sm:text-xs uppercase tracking-[0.35em] sm:tracking-[0.6em] font-semibold mt-2 sm:mt-3 text-gray-500">A Community of Storytellers</span>
+      </h1>
       <p class="max-w-xl mx-auto text-sm text-gray-600 dark:text-gray-400 leading-relaxed">Free romance, thriller, and nonfiction novels from independent authors — read online, no downloads or apps required. Preview any book's first 3 chapters instantly, then claim it free to keep reading on any phone, tablet, or computer.</p>
     </header>
     <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 items-stretch">
@@ -608,14 +610,19 @@ ${cardsHtml}
   </div>`;
 }
 
-function buildBookCardHtml(book) {
+// headingTag defaults to h2 for the common case (a card grid sitting
+// directly under a page's own H1 - homepage, books.html, creator profiles).
+// The "More Free Books to Read" related-content block passes 'h3' instead,
+// since those cards are nested under that section's own H2, and a second H2
+// there would flatten the hierarchy rather than nest it.
+function buildBookCardHtml(book, headingTag = 'h2') {
   const priceLabel = book.price_cents === 0 ? 'Read Free' : book.price_cents != null ? `View Book — $${(book.price_cents / 100).toFixed(2)}` : 'View Book';
   return `  <article class="h-full flex flex-col border border-gray-200 dark:border-white/10 rounded-lg p-6 bg-white dark:bg-gray-900">
     <a href="/${encodeURIComponent(book.id)}" class="flex flex-col h-full">
       <div class="aspect-[2/3] overflow-hidden rounded mb-4 bg-gray-100 dark:bg-gray-800">
         <img src="${escapeHtml(book.cover)}" alt="${escapeHtml(book.title)} cover" class="w-full h-full object-cover" loading="lazy" width="400" height="600">
       </div>
-      <h3 class="text-2xl font-bold mb-1 dark:text-white" style="font-family:'Playfair Display',serif;">${escapeHtml(book.title)}</h3>
+      <${headingTag} class="text-2xl font-bold mb-1 dark:text-white" style="font-family:'Playfair Display',serif;">${escapeHtml(book.title)}</${headingTag}>
       <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">${escapeHtml(book.author)}${book.published_date ? ' • ' + escapeHtml(book.published_date) : ''}</p>
       ${book.genre ? `<p class="text-[11px] uppercase tracking-[0.2em] text-amber-700 dark:text-amber-400 mb-3">${escapeHtml(book.genre)}</p>` : ''}
       <p class="text-gray-700 dark:text-gray-300 mb-6 leading-relaxed text-sm flex-1">${escapeHtml(book.synopsis)}</p>
@@ -722,7 +729,7 @@ function buildRelatedArticlesHtml(article, allArticles) {
     <div class="border-t border-gray-200 dark:border-white/10 mt-12 pt-10">
       <h2 class="text-xl font-['Playfair_Display'] font-bold mb-6 dark:text-white">More From Orastories</h2>
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-${related.map(buildArticleCardHtml).join('\n')}
+${related.map((a) => buildArticleCardHtml(a, 'h3')).join('\n')}
       </div>
     </div>`;
 }
@@ -766,7 +773,11 @@ ${renderArticleBodyHtml(article.body)}
   </article>`;
 }
 
-function buildArticleCardHtml(article) {
+// headingTag defaults to h2 for the common case (blog.html's grid, sitting
+// directly under that page's own H1). The "More From Orastories"
+// related-content block passes 'h3' instead, matching buildBookCardHtml's
+// reasoning above.
+function buildArticleCardHtml(article, headingTag = 'h2') {
   return `  <article class="rounded-sm border overflow-hidden bg-white dark:bg-[#161616] border-black/10 dark:border-white/10">
     <a href="/${encodeURIComponent(article.slug)}" class="block">
       ${
@@ -775,7 +786,7 @@ function buildArticleCardHtml(article) {
           : ''
       }
       <div class="p-5">
-        <h2 class="text-xl font-['Playfair_Display'] font-bold mb-2 dark:text-white">${escapeHtml(article.title)}</h2>
+        <${headingTag} class="text-xl font-['Playfair_Display'] font-bold mb-2 dark:text-white">${escapeHtml(article.title)}</${headingTag}>
       </div>
     </a>
     <p class="px-5 pb-5 text-xs text-gray-500 dark:text-gray-400">By ${escapeHtml(authorNameFor(article))}</p>
@@ -803,7 +814,7 @@ function buildCreatorBodyHtml(creator, books) {
   const memberSinceYear = creator.created_at ? new Date(creator.created_at).getFullYear() : null;
   const booksHtml = books.length
     ? `  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 items-stretch">
-${books.map(buildBookCardHtml).join('\n')}
+${books.map((b) => buildBookCardHtml(b)).join('\n')}
   </div>`
     : '  <p class="text-center text-sm text-gray-500 dark:text-gray-400">Hasn\'t published any books yet.</p>';
 
@@ -1029,7 +1040,7 @@ async function main() {
   await injectGrid(
     'books.html',
     '<div id="booksGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 items-stretch"></div>',
-    books.map(buildBookCardHtml).join('\n')
+    books.map((b) => buildBookCardHtml(b)).join('\n')
   );
   console.log('  injected server-rendered cards into dist/books.html');
 
@@ -1040,7 +1051,7 @@ async function main() {
   if (!blogHtml.includes(articlesPlaceholder)) {
     throw new Error('generate-seo-pages: could not find the expected placeholder markup in dist/blog.html - the source page structure may have changed.');
   }
-  const articlesReplacement = `<div id="articlesList" class="grid grid-cols-1 sm:grid-cols-2 gap-8">\n${articles.map(buildArticleCardHtml).join('\n')}\n    </div>`;
+  const articlesReplacement = `<div id="articlesList" class="grid grid-cols-1 sm:grid-cols-2 gap-8">\n${articles.map((a) => buildArticleCardHtml(a)).join('\n')}\n    </div>`;
   await writeFile(articlesFilePath, blogHtml.replace(articlesPlaceholder, articlesReplacement), 'utf8');
   console.log('  injected server-rendered cards into dist/blog.html');
 

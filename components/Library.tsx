@@ -83,12 +83,12 @@ const Library: React.FC<LibraryProps> = ({ onSelectBook, onSelectCreator, theme 
   return (
     <div className={`min-h-screen transition-colors duration-500 py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-12 ${isLight ? 'bg-[#fcfaf7]' : 'bg-[#0f0f0f]'}`}>
       <header className="max-w-5xl mx-auto mb-14 sm:mb-16 md:mb-24 text-center">
-        <h1 className={`text-5xl sm:text-6xl md:text-8xl font-['Playfair_Display'] mb-4 sm:mb-6 tracking-tight min-h-[48px] sm:min-h-[60px] md:min-h-[96px] ${isLight ? 'text-gray-900' : 'text-[#d4af37]'}`}>
+        <h1 className={`text-5xl sm:text-6xl md:text-8xl font-['Playfair_Display'] mb-4 sm:mb-6 tracking-tight min-h-[80px] sm:min-h-[104px] md:min-h-[150px] ${isLight ? 'text-gray-900' : 'text-[#d4af37]'}`}>
           Orastories
+          <span className="block text-[10px] sm:text-xs uppercase tracking-[0.35em] sm:tracking-[0.6em] font-semibold mt-2 sm:mt-3 text-gray-500">
+            A Community of Storytellers
+          </span>
         </h1>
-        <p className={`text-[10px] sm:text-xs uppercase tracking-[0.35em] sm:tracking-[0.6em] font-semibold mb-8 sm:mb-10 ${isLight ? 'text-gray-500' : 'text-gray-500'}`}>
-          A Community of Storytellers
-        </p>
         <div className={`w-16 h-px mx-auto opacity-40 mb-8 sm:mb-10 ${isLight ? 'bg-gray-400' : 'bg-[#d4af37]'}`}></div>
         <p className={`max-w-xl mx-auto text-sm leading-relaxed ${isLight ? 'text-gray-600' : 'text-gray-400'}`}>
           Free romance, thriller, and nonfiction novels from independent authors — read online, no downloads or apps
