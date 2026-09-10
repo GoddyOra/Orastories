@@ -1073,6 +1073,9 @@ async function main() {
     { loc: '/blog', lastmod: BUILD_DATE },
     { loc: '/reviews', lastmod: BUILD_DATE },
     { loc: '/contact', lastmod: BUILD_DATE },
+    { loc: '/about', lastmod: BUILD_DATE },
+    { loc: '/privacy', lastmod: BUILD_DATE },
+    { loc: '/terms', lastmod: BUILD_DATE },
     ...books.map((b) => ({ loc: `/${b.id}`, lastmod: (b.created_at || BUILD_DATE).slice(0, 10) })),
     ...articles.map((a) => ({ loc: `/${a.slug}`, lastmod: (a.created_at || BUILD_DATE).slice(0, 10) })),
     ...creators.map((c) => ({ loc: `/${c.username}`, lastmod: (c.created_at || BUILD_DATE).slice(0, 10) }))
