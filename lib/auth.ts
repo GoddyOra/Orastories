@@ -68,6 +68,34 @@ export async function fetchProfile(userId: string): Promise<Profile | null> {
   };
 }
 
+// Permanent, irreversible. Deleting auth.users needs the service role, so the
+// real work happens in the delete-account Edge Function - it takes the user id
+// from the caller's own JWT, so this can only ever delete your own account.
+// confirmEmail must match the signed-in address exactly; the server checks it
+// too rather than trusting the UI to have asked.
+export async function deleteAccount(confirmEmail: string): Promise<void> {
+  const { data, error } = await supabase.functions.invoke('delete-account', {
+    body: { confirmEmail }
+  });
+
+  if (error) {
+    // A non-2xx from the function surfaces as FunctionsHttpError, whose
+    // message is generic ("non-2xx status code") - the useful text is in the
+    // response body, so read it back rather than showing the wrapper.
+    const context = (error as { context?: Response }).context;
+    if (context && typeof context.json === 'function') {
+      const body = await context.json().catch(() => null);
+      if (body?.error) throw new Error(body.error);
+    }
+    throw error;
+  }
+  if (data?.error) throw new Error(data.error);
+
+  // The account is gone; clear the now-orphaned local session so the UI
+  // doesn't keep rendering as if it were still signed in.
+  await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+}
+
 export async function updateBio(userId: string, bio: string): Promise<void> {
   const trimmed = bio.trim();
   const { error } = await supabase

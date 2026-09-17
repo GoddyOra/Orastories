@@ -5,7 +5,7 @@ import { BookmarkedBook, listBookmarksWithBooks } from '../lib/bookmarks';
 import { listMyReviews, MyReviewWithBook } from '../lib/reviews';
 import { PurchasedBook, listMyPurchasesWithBooks } from '../lib/purchases';
 import { isUsernameAvailable, claimUsername, USERNAME_PATTERN } from '../lib/username';
-import { updateBio } from '../lib/auth';
+import { updateBio, deleteAccount } from '../lib/auth';
 import { getMyApplication, submitCreatorApplication } from '../lib/creatorApplications';
 import { getMyWalletBalance } from '../lib/creatorPayments';
 import { CreatorApplication, ThemeMode } from '../types';
@@ -71,6 +71,11 @@ const Portal: React.FC<PortalProps> = ({ theme, reason, onSelectBook, onSelectCr
   const [applyMessage, setApplyMessage] = useState('');
   const [applyLoading, setApplyLoading] = useState(false);
   const [applyError, setApplyError] = useState<string | null>(null);
+
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirmEmail, setDeleteConfirmEmail] = useState('');
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -168,6 +173,22 @@ const Portal: React.FC<PortalProps> = ({ theme, reason, onSelectBook, onSelectCr
       console.error('Bio save failed:', error);
     } finally {
       setSavingBio(false);
+    }
+  };
+
+  const handleDeleteAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setDeleteError(null);
+    setDeleteLoading(true);
+    try {
+      await deleteAccount(deleteConfirmEmail);
+      // The session is already cleared by deleteAccount. Send them back to a
+      // clean, signed-out library rather than leaving Portal rendering an
+      // account that no longer exists.
+      window.location.href = '/';
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : 'Could not delete the account.');
+      setDeleteLoading(false);
     }
   };
 
@@ -561,6 +582,77 @@ const Portal: React.FC<PortalProps> = ({ theme, reason, onSelectBook, onSelectCr
                     )}
                   </section>
                 )}
+
+                <section className="mt-14 pt-10 border-t border-black/10 dark:border-white/10">
+                  <h2 className={`text-xs uppercase tracking-[0.3em] mb-5 ${textMuted}`}>Delete Account</h2>
+                  {!deleteOpen ? (
+                    <>
+                      <p className={`text-sm mb-4 ${textMuted}`}>
+                        Permanently delete your account and personal data. This cannot be undone.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteOpen(true)}
+                        className="px-6 py-3 border border-red-600 text-red-600 text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-red-600 hover:text-white transition-all"
+                      >
+                        Delete My Account
+                      </button>
+                    </>
+                  ) : (
+                    <form onSubmit={handleDeleteAccount} className="space-y-4 max-w-md">
+                      <div className={`text-sm space-y-2 ${textMuted}`}>
+                        <p className={isLight ? 'text-gray-900' : 'text-white'}>
+                          This permanently deletes:
+                        </p>
+                        <ul className="list-disc pl-5 space-y-1">
+                          <li>Your account, username and bio</li>
+                          <li>Your reviews, ratings, comments and bookmarks</li>
+                          <li>Your reading progress and purchase history</li>
+                          <li>Your OraCoins balance and any articles you published</li>
+                        </ul>
+                        <p className="pt-1">
+                          Books you published stay available to readers who already claimed them, but are
+                          no longer linked to your profile. Deleted accounts cannot be recovered.
+                        </p>
+                      </div>
+                      <label className={`block text-xs uppercase tracking-[0.2em] ${textMuted}`}>
+                        Type <span className={isLight ? 'text-gray-900' : 'text-white'}>{user.email}</span> to confirm
+                      </label>
+                      <input
+                        type="email"
+                        value={deleteConfirmEmail}
+                        onChange={(e) => setDeleteConfirmEmail(e.target.value)}
+                        autoComplete="off"
+                        placeholder="your account email"
+                        className={`w-full px-4 py-3 rounded-sm border text-sm focus:outline-none focus:border-red-600 ${
+                          isLight ? 'bg-white border-black/15 text-gray-900' : 'bg-[#0f0f0f] border-white/15 text-white'
+                        }`}
+                      />
+                      {deleteError && <p className="text-sm text-red-500">{deleteError}</p>}
+                      <div className="flex gap-3">
+                        <button
+                          type="submit"
+                          disabled={deleteLoading || deleteConfirmEmail.trim().toLowerCase() !== (user.email ?? '').toLowerCase()}
+                          className="px-6 py-3 border border-red-600 text-red-600 text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-red-600 hover:text-white transition-all disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-red-600"
+                        >
+                          {deleteLoading ? 'Deleting...' : 'Permanently Delete'}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={deleteLoading}
+                          onClick={() => {
+                            setDeleteOpen(false);
+                            setDeleteConfirmEmail('');
+                            setDeleteError(null);
+                          }}
+                          className={`px-6 py-3 text-[10px] font-bold uppercase tracking-[0.3em] ${textMuted} hover:text-amber-700 transition-colors disabled:opacity-40`}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </section>
               </>
             )}
           </div>
