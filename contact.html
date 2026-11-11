@@ -235,6 +235,14 @@
           ></textarea>
         </div>
 
+        <!-- Honeypot: positioned off-screen rather than display:none, since
+             some bots skip fields that are display:none. Real visitors never
+             see or tab into it; anything typed here means a bot filled it. -->
+        <div aria-hidden="true" style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;">
+          <label for="contactRef">Leave this field empty</label>
+          <input type="text" id="contactRef" name="contact_ref" tabindex="-1" autocomplete="off">
+        </div>
+
         <p id="contactFormError" class="hidden text-sm text-red-500"></p>
 
         <button
@@ -304,11 +312,35 @@
       contactFormError.classList.remove('hidden');
     }
 
+    function showContactSent() {
+      contactSubmitBtn.textContent = 'Message Sent';
+      contactForm.reset();
+      setTimeout(() => {
+        contactSubmitBtn.textContent = 'Send Message';
+        contactSubmitBtn.disabled = false;
+      }, 2500);
+    }
+
+    // Bot protection, layer 1 and 2 (layer 3 is the contact_messages_not_gibberish
+    // check constraint in db/schema.sql, which also covers bots that skip this
+    // page and call the API directly). A filled honeypot or a submit faster
+    // than a person can type gets the normal "sent" response but writes
+    // nothing, so a bot gets no signal to adapt to.
+    const contactFormLoadedAt = Date.now();
+    const MIN_FILL_MS = 3000;
+
     contactForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       contactFormError.classList.add('hidden');
       contactSubmitBtn.disabled = true;
       contactSubmitBtn.textContent = 'Sending...';
+
+      const honeypotFilled = document.getElementById('contactRef').value !== '';
+      const tooFast = Date.now() - contactFormLoadedAt < MIN_FILL_MS;
+      if (honeypotFilled || tooFast) {
+        showContactSent();
+        return;
+      }
 
       try {
         const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
@@ -334,16 +366,17 @@
 
         if (error) throw error;
 
-        contactSubmitBtn.textContent = 'Message Sent';
-        contactForm.reset();
-        setTimeout(() => {
-          contactSubmitBtn.textContent = 'Send Message';
-          contactSubmitBtn.disabled = false;
-        }, 2500);
+        showContactSent();
       } catch (error) {
         console.error('Contact form submission failed:', error);
+        // 23514 = check_violation: the anti-gibberish rule rejected it. A real
+        // person only hits this with a long one-word subject AND message, so
+        // tell them how to get through rather than showing the raw DB error.
+        const isGibberishRule = error && error.code === '23514';
         showContactError(
-          error instanceof Error ? error.message : 'Something went wrong. Please try again.'
+          isGibberishRule
+            ? 'Please write your subject or message as a sentence with spaces between words.'
+            : error && error.message ? error.message : 'Something went wrong. Please try again.'
         );
         contactSubmitBtn.disabled = false;
         contactSubmitBtn.textContent = 'Send Message';

@@ -599,6 +599,20 @@ create policy "anyone sends a contact message" on contact_messages
   for insert to anon, authenticated
   with check (sender_id is null or sender_id = auth.uid());
 
+-- Bot protection, enforced server-side so it also catches bots that skip
+-- contact.html and insert through the REST API directly (the honeypot and
+-- minimum-fill-time checks in contact.html only stop bots that use the page).
+-- Signature of the spam bot seen Aug-Nov 2026: subject AND message are each a
+-- single 16-24 char run of random letters with no spaces. Requiring both to
+-- match keeps real messages safe (a one-word subject like "Collaboration" is
+-- fine as long as the message reads like a sentence). NOT VALID: applies to
+-- new rows only, so existing rows don't block adding it.
+alter table contact_messages add constraint contact_messages_not_gibberish
+  check (not (
+    char_length(message) >= 12 and message !~ '\s'
+    and char_length(subject) >= 12 and subject !~ '\s'
+  )) not valid;
+
 -- Phase K: OraCoins - prepaid wallet tipping. Every tip today is a live
 -- Stripe charge (2.9%+30c on a $1 tip is ~a third of it gone in fees, and
 -- every tip is a fresh card charge a fraudster could use to test stolen
