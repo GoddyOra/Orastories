@@ -30,11 +30,18 @@ permissions:
   pages: write
   id-token: write
 
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
-# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+# Only one deployment at a time, and a newer run cancels an older one still
+# in progress. This used to be cancel-in-progress: false (GitHub's starter
+# template default), and on 2026-10-05 - during a GitHub Actions incident - a
+# run hung at the github-pages environment gate and held this lock for the
+# full 30-day job timeout. All 29 nightly deploys from Oct 6 to Nov 3 were
+# cancelled behind it, so the site silently didn't deploy for a month.
+# Cancelling is safe here: every run builds from current main + live
+# Supabase data, so the newer run is always the one worth finishing, and a
+# Pages deploy either completes or leaves the previous version live.
 concurrency:
   group: "pages"
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   # Runs typecheck + the unit test suite before deploy is even allowed to
@@ -46,11 +53,12 @@ jobs:
   # ci.yml - a separate file could not actually block this deploy job.
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
@@ -63,15 +71,16 @@ jobs:
 
   deploy:
     needs: test
+    timeout-minutes: 20
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           # generate-seo-pages.mjs (part of `npm run build` below) creates a
           # real @supabase/supabase-js client, which eagerly initializes its
@@ -96,12 +105,12 @@ jobs:
           # isn't set yet, so this is safe to ship ahead of it existing.
           VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
       - name: Setup Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           # Upload built static files
           path: './dist'
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
